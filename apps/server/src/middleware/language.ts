@@ -6,10 +6,10 @@ import { parseLocale, type Locale } from "@repo/i18n";
 // ─────────────────────────────────────────────────────────────────────────────
 
 declare module "fastify" {
-  interface FastifyRequest {
-    /** 요청 언어 — onRequest 훅에서 Accept-Language 헤더 기반으로 세팅됨 */
-    lang: Locale;
-  }
+    interface FastifyRequest {
+        /** 요청 언어 — onRequest 훅에서 Accept-Language 헤더 기반으로 세팅됨 */
+        lang: Locale;
+    }
 }
 
 /**
@@ -19,9 +19,9 @@ declare module "fastify" {
  * 우선순위: Accept-Language 헤더 → 기본값 "ko"
  */
 export async function languageMiddleware(
-  request: FastifyRequest,
-  _reply: FastifyReply,
+    request: FastifyRequest,
+    _reply: FastifyReply,
 ): Promise<void> {
-  const header = request.headers["accept-language"];
-  request.lang = parseLocale(header);
+    const header = request.headers["accept-language"];
+    request.lang = parseLocale(header);
 }

@@ -5,31 +5,31 @@ import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 
 const notoSans = Noto_Sans_KR({
-  subsets: ["latin"],
-  variable: "--font-noto-sans",
-  display: "swap",
+    subsets: ["latin"],
+    variable: "--font-noto-sans",
+    display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Elivis",
-  description: "A project management app with only the things that actually matter.",
+    title: "Elivis",
+    description: "A project management app with only the things that actually matter.",
 };
 
 export default async function RootLayout({
-  children,
+    children,
 }: Readonly<{
-  children: React.ReactNode;
+    children: React.ReactNode;
 }>) {
-  const locale = await getLocale();
-  const messages = await getMessages();
+    const locale = await getLocale();
+    const messages = await getMessages();
 
-  return (
-    <html lang={locale} className={notoSans.variable}>
-      <body className="antialiased font-sans">
-        <NextIntlClientProvider locale={locale} messages={messages}>
-          {children}
-        </NextIntlClientProvider>
-      </body>
-    </html>
-  );
+    return (
+        <html lang={locale} className={notoSans.variable}>
+            <body className="antialiased font-sans">
+                <NextIntlClientProvider locale={locale} messages={messages}>
+                    {children}
+                </NextIntlClientProvider>
+            </body>
+        </html>
+    );
 }

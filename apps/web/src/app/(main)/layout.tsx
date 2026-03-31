@@ -7,16 +7,12 @@ import { MainLayoutClient } from "./MainLayoutClient";
 // 이 layout 은 유저 프로필을 fetch 해서 클라이언트 레이아웃에 전달합니다.
 // getMyProfile() 이 null 을 반환하는 경우(서버 연결 실패 · 토큰 만료)에는 /login 으로 리다이렉트합니다.
 
-export default async function MainLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const user = await getMyProfile();
+export default async function MainLayout({ children }: { children: React.ReactNode }) {
+    const user = await getMyProfile();
 
-  if (!user) {
-    redirect("/login");
-  }
+    if (!user) {
+        redirect("/login");
+    }
 
-  return <MainLayoutClient user={user}>{children}</MainLayoutClient>;
+    return <MainLayoutClient user={user}>{children}</MainLayoutClient>;
 }

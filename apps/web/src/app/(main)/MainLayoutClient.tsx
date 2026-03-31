@@ -51,6 +51,7 @@ export function MainLayoutClient({ children, user }: MainLayoutClientProps) {
           onClose={() => setSidebarOpen(false)}
           size={sidebarSize}
           onSizeChange={setSidebarSize}
+          isSuperAdmin={user?.systemRole === "SUPER_ADMIN"}
         />
         <div className="flex min-w-0 flex-1 flex-col">
           <AppHeader

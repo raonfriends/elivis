@@ -7,8 +7,8 @@ import type { UserStatus } from "@/lib/user-types";
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface UserStatusContextValue {
-  status:    UserStatus;
-  setStatus: (status: UserStatus) => void;
+    status: UserStatus;
+    setStatus: (status: UserStatus) => void;
 }
 
 const UserStatusContext = createContext<UserStatusContextValue | null>(null);
@@ -16,25 +16,25 @@ const UserStatusContext = createContext<UserStatusContextValue | null>(null);
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function UserStatusProvider({
-  children,
-  initialStatus,
+    children,
+    initialStatus,
 }: {
-  children:      React.ReactNode;
-  initialStatus: UserStatus;
+    children: React.ReactNode;
+    initialStatus: UserStatus;
 }) {
-  const [status, setStatus] = useState<UserStatus>(initialStatus);
+    const [status, setStatus] = useState<UserStatus>(initialStatus);
 
-  return (
-    <UserStatusContext.Provider value={{ status, setStatus }}>
-      {children}
-    </UserStatusContext.Provider>
-  );
+    return (
+        <UserStatusContext.Provider value={{ status, setStatus }}>
+            {children}
+        </UserStatusContext.Provider>
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 
 export function useUserStatus(): UserStatusContextValue {
-  const ctx = useContext(UserStatusContext);
-  if (!ctx) throw new Error("useUserStatus must be used within <UserStatusProvider>");
-  return ctx;
+    const ctx = useContext(UserStatusContext);
+    if (!ctx) throw new Error("useUserStatus must be used within <UserStatusProvider>");
+    return ctx;
 }

@@ -7,9 +7,9 @@ import fp from "fastify-plugin";
 // ─────────────────────────────────────────────────────────────────────────────
 
 declare module "fastify" {
-  interface FastifyInstance {
-    redis: Redis;
-  }
+    interface FastifyInstance {
+        redis: Redis;
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -17,22 +17,22 @@ declare module "fastify" {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const redisPlugin = fp(
-  async (fastify) => {
-    const url = process.env.REDIS_URL ?? "redis://localhost:6379";
+    async (fastify) => {
+        const url = process.env.REDIS_URL ?? "redis://localhost:6379";
 
-    const redis = new IORedis(url, {
-      maxRetriesPerRequest: 3,
-      lazyConnect: true,
-    });
+        const redis = new IORedis(url, {
+            maxRetriesPerRequest: 3,
+            lazyConnect: true,
+        });
 
-    await redis.connect();
-    fastify.log.info("Redis connection established");
+        await redis.connect();
+        fastify.log.info("Redis connection established");
 
-    fastify.decorate("redis", redis);
+        fastify.decorate("redis", redis);
 
-    fastify.addHook("onClose", async () => {
-      await redis.quit();
-    });
-  },
-  { name: "redis" },
+        fastify.addHook("onClose", async () => {
+            await redis.quit();
+        });
+    },
+    { name: "redis" },
 );

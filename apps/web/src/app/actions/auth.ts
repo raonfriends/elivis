@@ -3,11 +3,7 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 
-import {
-  clearSession,
-  getRefreshToken,
-  loginWithCredentials,
-} from "@/lib/auth.server";
+import { clearSession, getRefreshToken, loginWithCredentials } from "@/lib/auth.server";
 import { getWebMessages, type Locale, SUPPORTED_LOCALES } from "@repo/i18n";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -15,12 +11,12 @@ import { getWebMessages, type Locale, SUPPORTED_LOCALES } from "@repo/i18n";
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function getAuthMessages() {
-  const jar = await cookies();
-  const lang = jar.get("elivis_lang")?.value;
-  const locale: Locale = (SUPPORTED_LOCALES as string[]).includes(lang ?? "")
-    ? (lang as Locale)
-    : "ko";
-  return getWebMessages(locale).auth;
+    const jar = await cookies();
+    const lang = jar.get("elivis_lang")?.value;
+    const locale: Locale = (SUPPORTED_LOCALES as string[]).includes(lang ?? "")
+        ? (lang as Locale)
+        : "ko";
+    return getWebMessages(locale).auth;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -28,30 +24,30 @@ async function getAuthMessages() {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export interface LoginActionState {
-  error: string | null;
+    error: string | null;
 }
 
 export async function loginAction(
-  _prev: LoginActionState,
-  formData: FormData,
+    _prev: LoginActionState,
+    formData: FormData,
 ): Promise<LoginActionState> {
-  const email = (formData.get("email") as string)?.trim();
-  const password = formData.get("password") as string;
-  const msg = await getAuthMessages();
+    const email = (formData.get("email") as string)?.trim();
+    const password = formData.get("password") as string;
+    const msg = await getAuthMessages();
 
-  if (!email || !password) {
-    return { error: msg.emailRequired };
-  }
+    if (!email || !password) {
+        return { error: msg.emailRequired };
+    }
 
-  try {
-    await loginWithCredentials(email, password);
-  } catch (err) {
-    return {
-      error: err instanceof Error ? err.message : msg.loginFailed,
-    };
-  }
+    try {
+        await loginWithCredentials(email, password);
+    } catch (err) {
+        return {
+            error: err instanceof Error ? err.message : msg.loginFailed,
+        };
+    }
 
-  redirect("/");
+    redirect("/");
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -59,7 +55,7 @@ export async function loginAction(
 // ─────────────────────────────────────────────────────────────────────────────
 
 export async function logoutAction(): Promise<void> {
-  const refreshToken = await getRefreshToken();
-  await clearSession(refreshToken ?? undefined);
-  redirect("/login");
+    const refreshToken = await getRefreshToken();
+    await clearSession(refreshToken ?? undefined);
+    redirect("/login");
 }

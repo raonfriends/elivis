@@ -2,7 +2,7 @@ import { getMyProfile } from "@/lib/users";
 import { SettingsClient } from "./SettingsClient";
 
 export default async function SettingsPage() {
-  const user = await getMyProfile();
+    const user = await getMyProfile();
 
-  return <SettingsClient user={user} />;
+    return <SettingsClient user={user} />;
 }

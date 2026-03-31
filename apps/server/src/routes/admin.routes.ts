@@ -5,17 +5,13 @@ import type { UpdateRoleBody, UpdateRoleParams } from "../controllers/admin.cont
 import { authenticateAdmin, authenticateUser } from "../middleware/auth";
 
 export async function adminRoutes(app: FastifyInstance) {
-  const { listUsers, updateUserRole } = createAdminController(app);
+    const { listUsers, updateUserRole } = createAdminController(app);
 
-  app.get(
-    "/admin/users",
-    { preHandler: [authenticateUser, authenticateAdmin] },
-    listUsers,
-  );
+    app.get("/admin/users", { preHandler: [authenticateUser, authenticateAdmin] }, listUsers);
 
-  app.patch<{ Params: UpdateRoleParams; Body: UpdateRoleBody }>(
-    "/admin/users/:userId/role",
-    { preHandler: [authenticateUser, authenticateAdmin] },
-    updateUserRole,
-  );
+    app.patch<{ Params: UpdateRoleParams; Body: UpdateRoleBody }>(
+        "/admin/users/:userId/role",
+        { preHandler: [authenticateUser, authenticateAdmin] },
+        updateUserRole,
+    );
 }
