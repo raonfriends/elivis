@@ -17,6 +17,14 @@ enum SystemRole {
   USER        /// 일반 사용자 — 소속 프로젝트만 접근
 }
 
+/// 사용자 현재 상태
+enum UserStatus {
+  WORKING     /// 열일중
+  VACATION    /// 휴가중
+  OFF_WORK    /// 퇴근
+  DEEP_FOCUS  /// 초집중모드
+}
+
 /// 프로젝트 내부 직책
 enum ProjectRole {
   LEADER         /// 프로젝트장 — 멤버 관리·삭제·설정 변경
@@ -29,13 +37,16 @@ enum ProjectRole {
 // ─────────────────────────────────────────────────────────────────────────────
 
 model User {
-  id         String   @id @default(cuid())
-  email      String   @unique
+  id         String     @id @default(cuid())
+  email      String     @unique
   name       String?
-  password   String   /// bcrypt 해시 저장
+  avatarUrl  String?    /// 프로필 이미지 경로 (e.g. /uploads/avatars/xxx.jpg)
+  bio        String?    /// 프로필 메시지
+  status     UserStatus @default(WORKING) /// 현재 상태
+  password   String     /// bcrypt 해시 저장
   systemRole SystemRole @default(USER)
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 
   memberships ProjectMember[]
   tasks       Task[]

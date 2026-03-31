@@ -37,5 +37,8 @@
   "packageManager": "pnpm@9.14.2",
   "engines": {
     "node": ">=24.14.0"
+  },
+  "dependencies": {
+    "elivis": "link:"
   }
 }

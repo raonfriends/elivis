@@ -115,7 +115,7 @@ Use that token in the signup request to create the first `SUPER_ADMIN` account.
 
 ```
 ⚠️  INITIAL SETUP MODE
-   SETUP TOKEN : a3f9c21b04e87d65
+   SETUP TOKEN : a3f9c21b04e87d65 (Random)
 ```
 
 ```bash

@@ -1,6 +1,11 @@
 import "dotenv/config";
 
+import { mkdirSync } from "fs";
+import path from "path";
+
 import cors from "@fastify/cors";
+import multipart from "@fastify/multipart";
+import fastifyStatic from "@fastify/static";
 import Fastify from "fastify";
 
 import { prismaPlugin } from "./plugins/prisma";
@@ -9,11 +14,33 @@ import { adminRoutes } from "./routes/admin.routes";
 import { authRoutes } from "./routes/auth.routes";
 import { healthRoutes } from "./routes/health.routes";
 import { projectRoutes } from "./routes/project.routes";
+import { userRoutes } from "./routes/user.routes";
+import { createStorageService } from "./services/storage.service";
 import { initSetupToken } from "./services/setup.service";
+import { languageMiddleware } from "./middleware/language";
 
-const port = Number(process.env.API_PORT) || 4000;
-const host = process.env.API_HOST ?? "0.0.0.0";
+// ── 설정 상수 ─────────────────────────────────────────────────────────────────
+
+const port       = Number(process.env.API_PORT) || 4000;
+const host       = process.env.API_HOST ?? "0.0.0.0";
 const corsOrigin = process.env.CORS_ORIGIN ?? "http://localhost:3000";
+
+/** 업로드 최대 파일 크기 (bytes). UPLOAD_MAX_FILE_SIZE_MB (MB 단위)를 변환. */
+export const UPLOAD_MAX_FILE_SIZE =
+  (Number(process.env.UPLOAD_MAX_FILE_SIZE_MB) || 2) * 1024 * 1024;
+
+/** 로컬 스토리지 루트 디렉토리 (서버 cwd 기준) */
+export const UPLOADS_DIR = path.resolve(process.cwd(), "uploads");
+
+// 로컬 스토리지일 때만 디렉토리 생성
+if ((process.env.UPLOAD_STORAGE ?? "local") === "local") {
+  mkdirSync(path.join(UPLOADS_DIR, "avatars"), { recursive: true });
+}
+
+/** 파일 스토리지 서비스 싱글톤 (local / s3) */
+export const storageService = createStorageService(UPLOADS_DIR);
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 const DIVIDER = "─".repeat(58);
 
@@ -25,6 +52,22 @@ async function main() {
     credentials: true,
   });
 
+  // ── 파일 업로드 ────────────────────────────────────────────────────────────
+  await app.register(multipart, {
+    limits: { fileSize: UPLOAD_MAX_FILE_SIZE },
+  });
+
+  // ── 로컬 스토리지 정적 서빙 (/uploads/) ────────────────────────────────────
+  if ((process.env.UPLOAD_STORAGE ?? "local") === "local") {
+    await app.register(fastifyStatic, {
+      root:   UPLOADS_DIR,
+      prefix: "/uploads/",
+    });
+  }
+
+  // ── 언어 감지 (모든 라우트보다 먼저 실행) ─────────────────────────────────
+  app.addHook("onRequest", languageMiddleware);
+
   // ── 플러그인 (순서 중요: 라우트보다 먼저 등록) ────────────────────────────
   await app.register(prismaPlugin);
   await app.register(redisPlugin);
@@ -32,6 +75,7 @@ async function main() {
   // ── 라우트 (/api prefix + /health 별도) ──────────────────────────────────
   await app.register(healthRoutes);
   await app.register(authRoutes,    { prefix: "/api" });
+  await app.register(userRoutes,    { prefix: "/api" });
   await app.register(projectRoutes, { prefix: "/api" });
   await app.register(adminRoutes,   { prefix: "/api" });
 

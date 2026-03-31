@@ -3,18 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 
 export const NOTIFICATION_READ_KEY = "elivis-notifications-all-read";
 export const NOTIFICATION_READ_EVENT = "elivis-notifications-read";
 
 export type SidebarSize = "expanded" | "collapsed" | "hidden";
 
-const navItems = [
-  { href: "/", label: "대시보드", icon: HomeIcon, redDot: false },
-  { href: "/mywork", label: "내작업", icon: FolderIcon, redDot: false },
-  { href: "/teams", label: "팀", icon: TeamIcon, redDot: false },
-  { href: "/projects", label: "프로젝트", icon: ProjectIcon, redDot: false },
-  { href: "/notification", label: "알림", icon: BellIcon, redDot: true },
+const navItemDefs = [
+  { href: "/", labelKey: "dashboard" as const, icon: HomeIcon, redDot: false },
+  { href: "/mywork", labelKey: "myWork" as const, icon: FolderIcon, redDot: false },
+  { href: "/teams", labelKey: "teams" as const, icon: TeamIcon, redDot: false },
+  { href: "/projects", labelKey: "projects" as const, icon: ProjectIcon, redDot: false },
+  { href: "/notification", labelKey: "notifications" as const, icon: BellIcon, redDot: true },
 ];
 
 function HomeIcon({ className }: { className?: string }) {
@@ -71,6 +72,8 @@ export function AppSidebar({
   onSizeChange,
 }: AppSidebarProps) {
   const pathname = usePathname();
+  const tNav = useTranslations("nav");
+  const tSidebar = useTranslations("sidebar");
   // 서버/클라이언트 초기 렌더를 동일하게 하기 위해 false로 고정. 실제 값은 useEffect에서 반영.
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const showLabels = size === "expanded";
@@ -91,7 +94,7 @@ export function AppSidebar({
           type="button"
           onClick={() => onSizeChange("expanded")}
           className="fixed left-2 top-16 z-60 hidden h-10 w-10 items-center justify-center rounded-xl border border-stone-200 bg-white/90 shadow-sm backdrop-blur md:flex hover:bg-white"
-          aria-label="사이드바 다시 열기"
+          aria-label={tSidebar("restore")}
         >
           <svg
             className="h-5 w-5 text-stone-600"
@@ -119,7 +122,7 @@ export function AppSidebar({
           open ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
         aria-hidden={!open}
-        aria-label="사이드바 닫기"
+        aria-label={tSidebar("collapse")}
       />
 
       <aside
@@ -161,7 +164,7 @@ export function AppSidebar({
                   }
                 }}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-stone-600 transition-colors hover:bg-stone-100"
-                aria-label="사이드바 접기/숨기기"
+                aria-label={tSidebar("collapse")}
               >
                 <svg
                   className="h-4 w-4"
@@ -187,7 +190,7 @@ export function AppSidebar({
           }`}
         >
           <ul className="space-y-0.5">
-            {navItems.map(({ href, label, icon: Icon, redDot }) => {
+            {navItemDefs.map(({ href, labelKey, icon: Icon, redDot }) => {
               const isActive = pathname === href;
               const showRedDot =
                 href === "/notification" ? hasUnreadNotifications : redDot;
@@ -216,7 +219,7 @@ export function AppSidebar({
                     </span>
                     {showLabels && (
                       <>
-                        <span className="min-w-0 flex-1 truncate">{label}</span>
+                        <span className="min-w-0 flex-1 truncate">{tNav(labelKey)}</span>
                         {showRedDot && (
                           <span
                             className="ml-auto h-2 w-2 shrink-0 rounded-full bg-red-500"
@@ -238,7 +241,7 @@ export function AppSidebar({
           >
             {showLabels && (
               <p className="px-3 text-xs font-medium uppercase tracking-wider text-stone-400">
-                워크스페이스
+                {tNav("workspace")}
               </p>
             )}
             <Link
@@ -251,7 +254,7 @@ export function AppSidebar({
               <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-stone-200 text-xs font-medium text-stone-600">
                 M
               </span>
-              {showLabels && <span className="truncate">내 워크스페이스</span>}
+              {showLabels && <span className="truncate">{tNav("myWorkspace")}</span>}
             </Link>
           </div>
         </nav>

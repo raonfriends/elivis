@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
 import "./globals.css";
 
 const notoSans = Noto_Sans_KR({
@@ -9,18 +11,25 @@ const notoSans = Noto_Sans_KR({
 });
 
 export const metadata: Metadata = {
-  title: "Elivis Web",
-  description: "Next.js App with shared UI",
+  title: "Elivis",
+  description: "A project management app with only the things that actually matter.",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="ko" className={notoSans.variable}>
-      <body className="antialiased font-sans">{children}</body>
+    <html lang={locale} className={notoSans.variable}>
+      <body className="antialiased font-sans">
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          {children}
+        </NextIntlClientProvider>
+      </body>
     </html>
   );
 }

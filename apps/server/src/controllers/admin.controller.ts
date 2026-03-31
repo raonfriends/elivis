@@ -1,8 +1,8 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { t } from "@repo/i18n";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 요청 타입
-// ─────────────────────────────────────────────────────────────────────────────
+import { MSG } from "../utils/messages";
+import { ok } from "../utils/response";
 
 export interface UpdateRoleParams {
   userId: string;
@@ -12,16 +12,8 @@ export interface UpdateRoleBody {
   systemRole: "SUPER_ADMIN" | "USER";
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 컨트롤러 팩토리
-// ─────────────────────────────────────────────────────────────────────────────
-
 export function createAdminController(app: FastifyInstance) {
-  /**
-   * GET /admin/users
-   * SUPER_ADMIN 전용 — 전체 사용자 목록 조회
-   */
-  async function listUsers(_request: FastifyRequest, reply: FastifyReply) {
+  async function listUsers(request: FastifyRequest, reply: FastifyReply) {
     const users = await app.prisma.user.findMany({
       select: {
         id: true,
@@ -34,13 +26,9 @@ export function createAdminController(app: FastifyInstance) {
       orderBy: { createdAt: "desc" },
     });
 
-    return reply.send(users);
+    return reply.send(ok(users, t(request.lang, MSG.ADMIN_USERS_FETCHED)));
   }
 
-  /**
-   * PATCH /admin/users/:userId/role
-   * SUPER_ADMIN 전용 — 유저 시스템 역할 변경
-   */
   async function updateUserRole(
     request: FastifyRequest<{ Params: UpdateRoleParams; Body: UpdateRoleBody }>,
     reply: FastifyReply,
@@ -54,7 +42,7 @@ export function createAdminController(app: FastifyInstance) {
       select: { id: true, email: true, systemRole: true },
     });
 
-    return reply.send(updated);
+    return reply.send(ok(updated, t(request.lang, MSG.ADMIN_USER_ROLE_UPDATED)));
   }
 
   return { listUsers, updateUserRole };

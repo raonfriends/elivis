@@ -1,8 +1,8 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import { t } from "@repo/i18n";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 요청 타입
-// ─────────────────────────────────────────────────────────────────────────────
+import { MSG } from "../utils/messages";
+import { badRequest, created, forbidden, notFound, ok } from "../utils/response";
 
 export interface CreateProjectBody {
   name: string;
@@ -18,27 +18,16 @@ export interface AddMemberBody {
   role?: "DEPUTY_LEADER" | "MEMBER";
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 컨트롤러 팩토리
-// app 을 주입받아 prisma 에 접근합니다.
-// ─────────────────────────────────────────────────────────────────────────────
-
 export function createProjectController(app: FastifyInstance) {
-  /**
-   * POST /projects
-   * 프로젝트 생성 — 생성자는 자동으로 LEADER 로 ProjectMember 에 등록
-   */
   async function createProject(
     request: FastifyRequest<{ Body: CreateProjectBody }>,
     reply: FastifyReply,
   ) {
     const { name, description } = request.body;
+    const lang = request.lang;
 
     if (!name?.trim()) {
-      return reply.code(400).send({
-        error: "BadRequest",
-        message: "name 필드는 필수입니다.",
-      });
+      return reply.code(400).send(badRequest(t(lang, MSG.PROJECT_NAME_REQUIRED)));
     }
 
     const project = await app.prisma.project.create({
@@ -57,18 +46,15 @@ export function createProjectController(app: FastifyInstance) {
       },
     });
 
-    return reply.code(201).send(project);
+    return reply.code(201).send(created(project, t(lang, MSG.PROJECT_CREATED)));
   }
 
-  /**
-   * GET /projects/:projectId
-   * 프로젝트 멤버만 조회 가능
-   */
   async function getProject(
     request: FastifyRequest<{ Params: ProjectParams }>,
     reply: FastifyReply,
   ) {
     const { projectId } = request.params;
+    const lang = request.lang;
 
     const project = await app.prisma.project.findUnique({
       where: { id: projectId },
@@ -82,33 +68,24 @@ export function createProjectController(app: FastifyInstance) {
     });
 
     if (!project) {
-      return reply.code(404).send({
-        error: "NotFound",
-        message: "프로젝트를 찾을 수 없습니다.",
-      });
+      return reply.code(404).send(notFound(t(lang, MSG.PROJECT_NOT_FOUND)));
     }
 
     const isMember = project.members.some((m) => m.userId === request.userId);
     if (!isMember) {
-      return reply.code(403).send({
-        error: "Forbidden",
-        message: "프로젝트 멤버가 아닙니다.",
-      });
+      return reply.code(403).send(forbidden(t(lang, MSG.FORBIDDEN_NOT_MEMBER)));
     }
 
-    return reply.send(project);
+    return reply.send(ok(project, t(lang, MSG.PROJECT_FETCHED)));
   }
 
-  /**
-   * POST /projects/:projectId/members
-   * LEADER·DEPUTY_LEADER 만 멤버 초대/역할 변경 가능
-   */
   async function addMember(
     request: FastifyRequest<{ Params: ProjectParams; Body: AddMemberBody }>,
     reply: FastifyReply,
   ) {
     const { projectId } = request.params;
     const { userId, role = "MEMBER" } = request.body;
+    const lang = request.lang;
 
     const member = await app.prisma.projectMember.upsert({
       where: { userId_projectId: { userId, projectId } },
@@ -116,7 +93,7 @@ export function createProjectController(app: FastifyInstance) {
       create: { userId, projectId, role },
     });
 
-    return reply.code(201).send(member);
+    return reply.code(201).send(created(member, t(lang, MSG.PROJECT_MEMBER_ADDED)));
   }
 
   return { createProject, getProject, addMember };
