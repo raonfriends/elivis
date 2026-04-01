@@ -12,11 +12,9 @@ import { IntroBlockContent } from "./TeamIntroBlockContent";
 
 export function TeamIntroBlocks({
     team,
-    viewerRole,
     layout,
 }: {
     team: TeamDetail;
-    viewerRole: "LEADER" | "MEMBER";
     layout: IntroLayoutConfig;
 }) {
     return (
@@ -25,7 +23,6 @@ export function TeamIntroBlocks({
                 <div key={b.id} className={`min-w-0 ${colSpanClass(b.colSpan)}`}>
                     <IntroBlockContent
                         team={team}
-                        viewerRole={viewerRole}
                         blockType={b.type}
                     />
                 </div>
@@ -36,16 +33,13 @@ export function TeamIntroBlocks({
 
 export function TeamIntroGrid({
     team,
-    viewerRole,
 }: {
     team: TeamDetail;
-    viewerRole: "LEADER" | "MEMBER";
 }) {
     const layout = parseIntroLayoutJson(team.introLayoutJson);
     return (
         <TeamIntroBlocks
             team={team}
-            viewerRole={viewerRole}
             layout={layout}
         />
     );

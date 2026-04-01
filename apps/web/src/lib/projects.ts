@@ -1,9 +1,14 @@
 const STORAGE_KEY = "elivis-projects";
 
+export type ProjectViewerRole = "LEADER" | "DEPUTY_LEADER" | "MEMBER";
+
 export type ProjectUser = {
     id: string;
     name: string;
+    /** 표시용(이메일) */
     userId: string;
+    role?: ProjectViewerRole;
+    avatarUrl?: string | null;
 };
 
 export type ProjectTeam = {
@@ -27,6 +32,8 @@ export type Project = {
     participants: ProjectUser[];
     teams: ProjectTeam[];
     createdAt: number;
+    /** API 조회 시에만 — 로컬 데모 프로젝트에는 없음 */
+    viewerRole?: ProjectViewerRole;
 };
 
 function normalizeProject(
@@ -45,6 +52,7 @@ function normalizeProject(
         participants: Array.isArray(p.participants) ? p.participants : [],
         teams: Array.isArray(p.teams) ? p.teams : [],
         createdAt: p.createdAt,
+        viewerRole: p.viewerRole,
     };
 }
 

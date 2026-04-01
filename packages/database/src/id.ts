@@ -17,3 +17,13 @@ export function generatePublicId(length = 8): string {
     }
     return s;
 }
+
+/** 팀 ID 규칙: `t-xxxxxxxx` (뒤 8자는 `generatePublicId(8)`) */
+export function generateTeamId(): string {
+    return `t-${generatePublicId(8)}`;
+}
+
+/** 프로젝트 ID 규칙: `prj-xxxxxxxx` (뒤 8자는 `generatePublicId(8)`) */
+export function generateProjectId(): string {
+    return `prj-${generatePublicId(8)}`;
+}

@@ -1,10 +1,14 @@
-import { generatePublicId, Prisma } from "@repo/database";
+import { generateTeamId, Prisma } from "@repo/database";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { t } from "@repo/i18n";
 import sharp from "sharp";
 
 import { storageService } from "../index";
 import { MSG } from "../utils/messages";
+import {
+    type ProjectRowForMemberDisplay,
+    withProjectDisplayMemberCounts,
+} from "../utils/project-display-member-count";
 import { badRequest, conflict, created, forbidden, notFound, ok } from "../utils/response";
 
 /** 팀 배너 가로형 썸네일 (px) */
@@ -189,7 +193,7 @@ export function createTeamController(app: FastifyInstance) {
             team = await app.prisma.$transaction(async (tx) => {
                 const createdTeam = await tx.team.create({
                     data: {
-                        id: generatePublicId(),
+                        id: generateTeamId(),
                         name: name.trim(),
                         shortDescription: shortDescription?.trim() ? shortDescription.trim() : null,
                         introMessage: introMessage?.trim() ? introMessage.trim() : null,
@@ -197,10 +201,9 @@ export function createTeamController(app: FastifyInstance) {
                         createdById: request.userId,
                         members: {
                             create: {
-                                id: generatePublicId(),
                                 userId: request.userId,
                                 role: "LEADER",
-                            },
+                            } as never,
                         },
                     },
                 });
@@ -208,11 +211,10 @@ export function createTeamController(app: FastifyInstance) {
                 if (extraIds.length > 0) {
                     await tx.teamMember.createMany({
                         data: extraIds.map((userId) => ({
-                            id: generatePublicId(),
                             teamId: createdTeam.id,
                             userId,
                             role: "MEMBER" as const,
-                        })),
+                        })) as never,
                     });
                 }
 
@@ -244,7 +246,14 @@ export function createTeamController(app: FastifyInstance) {
 
     async function listTeams(
         request: FastifyRequest<{
-            Querystring: { q?: string; take?: string; skip?: string };
+            Querystring: {
+                q?: string;
+                take?: string;
+                skip?: string;
+                kind?: string;
+                leaderOnly?: string;
+                myRole?: string;
+            };
         }>,
         reply: FastifyReply,
     ) {
@@ -255,32 +264,78 @@ export function createTeamController(app: FastifyInstance) {
         const kind: "my" | "public" | null =
             kindRaw === "my" ? "my" : kindRaw === "public" ? "public" : null;
 
+        const leaderOnlyRaw = String(
+            (request.query as { leaderOnly?: unknown }).leaderOnly ?? "",
+        ).trim();
+        const myRoleRaw = String((request.query as { myRole?: unknown }).myRole ?? "").trim();
+        const leaderOnly =
+            leaderOnlyRaw === "1" ||
+            leaderOnlyRaw === "true" ||
+            myRoleRaw.toLowerCase() === "leader";
+
         const userId = request.userId;
-        const whereMy = teamListWhereSqlMyTeams(userId, q);
+        const whereMySql = teamListWhereSqlMyTeams(userId, q);
         const wherePub = teamListWhereSqlPublic(q);
         const orderMy = teamListOrderSqlMyTeams(userId);
         const orderPub = teamListOrderSqlPublic();
 
-        const [
-            idRowsMy,
-            countRowsMy,
-            idRowsPub,
-            countRowsPub,
-        ] = await Promise.all([
-            kind === "public"
-                ? Promise.resolve([] as { id: string }[])
-                : app.prisma.$queryRaw<{ id: string }[]>`
+        /** 프로젝트 생성 등 `leaderOnly` — raw SQL enum 비교 대신 Prisma로 팀장 멤버십을 확정 */
+        const loadMyTeamsAsLeaderWithPrisma = async () => {
+            const search: Prisma.TeamWhereInput | undefined = q
+                ? {
+                      OR: [
+                          { name: { contains: q, mode: "insensitive" } },
+                          { shortDescription: { contains: q, mode: "insensitive" } },
+                          { introMessage: { contains: q, mode: "insensitive" } },
+                      ],
+                  }
+                : undefined;
+            const whereLeader: Prisma.TeamWhereInput = {
+                AND: [
+                    { members: { some: { userId, role: "LEADER" } } },
+                    ...(search ? [search] : []),
+                ],
+            };
+            const [pageRows, cnt] = await Promise.all([
+                app.prisma.team.findMany({
+                    where: whereLeader,
+                    orderBy: { createdAt: "desc" },
+                    take,
+                    skip,
+                    select: { id: true },
+                }),
+                app.prisma.team.count({ where: whereLeader }),
+            ]);
+            return {
+                idRowsMy: pageRows.map((r) => ({ id: r.id })),
+                countRowsMy: [{ c: BigInt(cnt) }] as [{ c: bigint }],
+            };
+        };
+
+        let idRowsMy: { id: string }[];
+        let countRowsMy: [{ c: bigint }];
+
+        if (kind === "public") {
+            idRowsMy = [];
+            countRowsMy = [{ c: 0n }];
+        } else if (leaderOnly) {
+            ({ idRowsMy, countRowsMy } = await loadMyTeamsAsLeaderWithPrisma());
+        } else {
+            [idRowsMy, countRowsMy] = await Promise.all([
+                app.prisma.$queryRaw<{ id: string }[]>`
                     SELECT t.id FROM "Team" t
-                    ${whereMy}
+                    ${whereMySql}
                     ${orderMy}
                     LIMIT ${take} OFFSET ${skip}
                 `,
-            kind === "public"
-                ? Promise.resolve([{ c: 0n }] as [{ c: bigint }])
-                : app.prisma.$queryRaw<[{ c: bigint }]>`
+                app.prisma.$queryRaw<[{ c: bigint }]>`
                     SELECT COUNT(*)::bigint AS c FROM "Team" t
-                    ${whereMy}
+                    ${whereMySql}
                 `,
+            ]);
+        }
+
+        const [idRowsPub, countRowsPub] = await Promise.all([
             kind === "my"
                 ? Promise.resolve([] as { id: string }[])
                 : app.prisma.$queryRaw<{ id: string }[]>`
@@ -412,22 +467,11 @@ export function createTeamController(app: FastifyInstance) {
                 members: {
                     orderBy: [{ role: "asc" }, { joinedAt: "asc" }],
                     select: {
-                        id: true,
                         role: true,
                         joinedAt: true,
                         user: {
                             select: { id: true, email: true, name: true, avatarUrl: true },
                         },
-                    },
-                },
-                projects: {
-                    orderBy: { createdAt: "desc" },
-                    select: {
-                        id: true,
-                        name: true,
-                        description: true,
-                        createdAt: true,
-                        _count: { select: { tasks: true, members: true } },
                     },
                 },
             },
@@ -438,8 +482,38 @@ export function createTeamController(app: FastifyInstance) {
             if (!viewerRole) {
                 return reply.code(404).send(notFound(t(lang, MSG.TEAM_NOT_FOUND)));
             }
+
+            /** 스키마의 `projectTeams`와 동기화된 Prisma 클라이언트 기준 (일부 환경에서 생성 타입이 뒤처질 수 있음) */
+            const projectRows = (await app.prisma.project.findMany({
+                where: {
+                    OR: [{ teamId }, { projectTeams: { some: { teamId } } }],
+                },
+                orderBy: { createdAt: "desc" },
+                select: {
+                    id: true,
+                    name: true,
+                    description: true,
+                    createdAt: true,
+                    teamId: true,
+                    projectTeams: {
+                        select: {
+                            team: { select: { id: true } },
+                        },
+                    },
+                    members: { select: { userId: true } },
+                    _count: { select: { tasks: true } },
+                },
+            } as never)) as unknown as (ProjectRowForMemberDisplay & {
+                id: string;
+                name: string;
+                description: string | null;
+                createdAt: Date;
+            })[];
+
+            const projects = await withProjectDisplayMemberCounts(app.prisma, projectRows);
+
             return reply.send(
-                ok({ ...memberTeam, viewerRole }, t(lang, MSG.TEAM_DETAIL_FETCHED)),
+                ok({ ...memberTeam, projects, viewerRole }, t(lang, MSG.TEAM_DETAIL_FETCHED)),
             );
         }
 
@@ -508,11 +582,10 @@ export function createTeamController(app: FastifyInstance) {
         try {
             await app.prisma.teamMember.create({
                 data: {
-                    id: generatePublicId(),
                     teamId,
                     userId: targetUserId,
                     role: "MEMBER",
-                },
+                } as never,
             });
         } catch (e) {
             if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") {

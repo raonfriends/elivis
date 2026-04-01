@@ -82,12 +82,10 @@ export function SortablePreviewBlock({
 
 export function TeamIntroSortableEditGrid({
     team,
-    viewerRole,
     layout,
     onLayoutChange,
 }: {
     team: TeamDetail;
-    viewerRole: "LEADER" | "MEMBER";
     layout: IntroLayoutConfig;
     onLayoutChange: (next: IntroLayoutConfig) => void;
 }) {
@@ -124,7 +122,6 @@ export function TeamIntroSortableEditGrid({
                         >
                             <IntroBlockContent
                                 team={team}
-                                viewerRole={viewerRole}
                                 blockType={b.type}
                             />
                         </SortablePreviewBlock>

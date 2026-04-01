@@ -27,10 +27,21 @@ export const ja = {
     project: {
       created:      "プロジェクトが作成されました。",
       fetched:      "プロジェクトの取得が完了しました。",
+      updated:      "プロジェクトを更新しました。",
+      deleted:      "プロジェクトを削除しました。",
       memberAdded:  "メンバーが追加されました。",
-      nameRequired: "nameフィールドは必須です。",
+      nameRequired: "プロジェクト名は必須です。",
+      startDateRequired: "開始日は必須です。",
+      endDateRequired: "終了日を入力するか、終了日未定を選択してください。",
       notFound:     "プロジェクトが見つかりません。",
       teamNotMember: "このチームのメンバーのみ、チームにプロジェクトを紐づけられます。",
+      teamLeaderOnly:
+        "プロジェクト作成時にこのチームを紐づけるには、チームリーダーである必要があります。",
+      deleteNameMismatch: "プロジェクト名が一致しません。",
+      leaderOnly: "チームリーダーのみ実行できます。",
+      invalidDates: "終了日は開始日以降である必要があります。",
+      dateInvalid: "日付の形式が正しくありません。",
+      participantsInvalid: "参加者として指定できないユーザーが含まれています。",
     },
     team: {
       created:       "チームが作成されました。",
@@ -156,6 +167,7 @@ export const ja = {
       detail: {
         common: {
           cancel: "キャンセル",
+          close: "閉じる",
           delete: "削除",
           deleting: "削除中…",
           back: "戻る",

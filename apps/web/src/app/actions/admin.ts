@@ -4,24 +4,10 @@ import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
 
 import { apiUrl } from "@/lib/api";
+import type { ApiEnvelope } from "@/lib/api-envelope";
+import { normalizeAdminUserRow, type ApiAdminUserRow } from "@/lib/admin.server";
 import { AT_COOKIE } from "@/lib/auth.server";
-import { normalizeAdminUserRow, type AdminUserRow } from "@/lib/admin.server";
-
-interface ApiResponse<T> {
-    code: number;
-    message: string;
-    data: T;
-}
-
-async function buildHeaders() {
-    const jar = await cookies();
-    return {
-        Authorization: `Bearer ${jar.get(AT_COOKIE)?.value ?? ""}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "Accept-Language": jar.get("elivis_lang")?.value ?? "ko",
-    };
-}
+import { apiFetchHeaders } from "@/lib/fetch-api-headers.server";
 
 export async function updateAdminUserAction(
     userId: string,
@@ -30,7 +16,7 @@ export async function updateAdminUserAction(
         systemRole?: "SUPER_ADMIN" | "USER";
         password?: string;
     },
-): Promise<{ ok: true; user: AdminUserRow } | { ok: false; message: string }> {
+): Promise<{ ok: true; user: ApiAdminUserRow } | { ok: false; message: string }> {
     const jar = await cookies();
     if (!jar.get(AT_COOKIE)?.value) {
         return { ok: false, message: "로그인이 필요합니다." };
@@ -39,12 +25,12 @@ export async function updateAdminUserAction(
     try {
         const res = await fetch(apiUrl(`/api/admin/users/${userId}`), {
             method: "PATCH",
-            headers: await buildHeaders(),
+            headers: await apiFetchHeaders(),
             body: JSON.stringify(data),
             cache: "no-store",
         });
 
-        const body = (await res.json()) as ApiResponse<AdminUserRow>;
+        const body = (await res.json()) as ApiEnvelope<ApiAdminUserRow>;
 
         if (!res.ok) {
             return { ok: false, message: body.message ?? "수정에 실패했습니다." };
@@ -63,7 +49,7 @@ export async function createAdminUserAction(data: {
     password: string;
     name?: string;
     systemRole: "SUPER_ADMIN" | "USER";
-}): Promise<{ ok: true; user: AdminUserRow } | { ok: false; message: string }> {
+}): Promise<{ ok: true; user: ApiAdminUserRow } | { ok: false; message: string }> {
     const jar = await cookies();
     if (!jar.get(AT_COOKIE)?.value) {
         return { ok: false, message: "로그인이 필요합니다." };
@@ -72,12 +58,12 @@ export async function createAdminUserAction(data: {
     try {
         const res = await fetch(apiUrl("/api/admin/users"), {
             method: "POST",
-            headers: await buildHeaders(),
+            headers: await apiFetchHeaders(),
             body: JSON.stringify(data),
             cache: "no-store",
         });
 
-        const body = (await res.json()) as ApiResponse<AdminUserRow>;
+        const body = (await res.json()) as ApiEnvelope<ApiAdminUserRow>;
 
         if (!res.ok) {
             return { ok: false, message: body.message ?? "사용자 생성에 실패했습니다." };
@@ -103,12 +89,12 @@ export async function updateUserSystemRoleAction(
     try {
         const res = await fetch(apiUrl(`/api/admin/users/${userId}/role`), {
             method: "PATCH",
-            headers: await buildHeaders(),
+            headers: await apiFetchHeaders(),
             body: JSON.stringify({ systemRole }),
             cache: "no-store",
         });
 
-        const body = (await res.json()) as ApiResponse<unknown>;
+        const body = (await res.json()) as ApiEnvelope<unknown>;
 
         if (!res.ok) {
             return { ok: false, message: body.message ?? "역할 변경에 실패했습니다." };

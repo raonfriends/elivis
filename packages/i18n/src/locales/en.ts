@@ -28,9 +28,20 @@ export const en = {
       created:      "Project created successfully.",
       fetched:      "Project retrieved successfully.",
       memberAdded:  "Member has been added.",
-      nameRequired: "The name field is required.",
+      nameRequired: "Project name is required.",
+      startDateRequired: "Start date is required.",
+      endDateRequired: "Enter an end date or select \"No end date yet\".",
       notFound:     "Project not found.",
       teamNotMember: "Only members of this team can link a project to the team.",
+      teamLeaderOnly:
+        "You must be the team leader to link this team when creating a project.",
+      invalidDates: "The end date must be on or after the start date.",
+      dateInvalid: "The date format is invalid.",
+      participantsInvalid: "One or more selected participants are invalid.",
+      updated: "Project details updated.",
+      deleted: "The project has been deleted.",
+      deleteNameMismatch: "The project name does not match.",
+      leaderOnly: "Only the project leader can perform this action.",
     },
     team: {
       created:       "Team created successfully.",
@@ -156,6 +167,7 @@ export const en = {
       detail: {
         common: {
           cancel: "Cancel",
+          close: "Close",
           delete: "Delete",
           deleting: "Deleting…",
           back: "Back",

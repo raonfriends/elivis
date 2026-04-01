@@ -190,6 +190,13 @@ Detailed documentation for each application lives in `docs/`:
 
 ---
 
+## ID 규칙
+
+- **Team**: `t-xxxxxxxx`
+- **Project**: `prj-xxxxxxxx`
+
+`xxxxxxxx`는 영문 대소문자 + 숫자 조합 8자리이며, 앱에서 생성해 DB `id`에 저장합니다.
+
 ## Production Deployment
 
 ```bash

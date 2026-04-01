@@ -27,14 +27,11 @@ export const TeamIntroPageContent = forwardRef<
     TeamIntroPageContentHandle,
     {
         team: TeamDetail;
-        onEditIntroClick: () => void;
         onLayoutEditModeChange?: (next: boolean) => void;
     }
->(function TeamIntroPageContent({ team, onEditIntroClick, onLayoutEditModeChange }, ref) {
+>(function TeamIntroPageContent({ team, onLayoutEditModeChange }, ref) {
     const t = useTranslations("teams.detail");
     const isLeader = team.viewerRole === "LEADER";
-    const blockViewerRole = team.viewerRole ?? "MEMBER";
-
     const [layoutEditMode, setLayoutEditMode] = useState(false);
     const [panelOpen, setPanelOpen] = useState(false);
     const [layoutDraft, setLayoutDraft] = useState<IntroLayoutConfig>(() =>
@@ -94,7 +91,6 @@ export const TeamIntroPageContent = forwardRef<
                 <div className="rounded-2xl ring-2 ring-amber-400/35 ring-offset-2 ring-offset-[#f8f7f5] transition-shadow">
                     <TeamIntroSortableEditGrid
                         team={team}
-                        viewerRole={blockViewerRole}
                         layout={layoutDraft}
                         onLayoutChange={setLayoutDraft}
                     />
@@ -102,7 +98,6 @@ export const TeamIntroPageContent = forwardRef<
             ) : (
                 <TeamIntroBlocks
                     team={team}
-                    viewerRole={blockViewerRole}
                     layout={parseIntroLayoutJson(team.introLayoutJson)}
                 />
             )}

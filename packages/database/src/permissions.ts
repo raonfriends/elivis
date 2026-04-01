@@ -77,8 +77,27 @@ export async function checkProjectPermission(
 }
 
 /**
- * SUPER_ADMIN 이거나, 해당 프로젝트의 멤버인지 확인합니다.
- * API 게이트웨이 레벨에서 간단히 쓸 때 유용합니다.
+ * `GET /api/projects` 비관리자 필터의 팀 조건과 동일 — 목록에 보이면 상세도 열리게 맞춤.
+ * (이전: teamId 집합 + `teamMember.findFirst`는 Prisma/DB 조합에서 목록과 어긋날 수 있음)
+ */
+function projectWhereUserInLinkedTeams(userId: string) {
+  return {
+    OR: [
+      { team: { members: { some: { userId } } } },
+      {
+        projectTeams: {
+          some: {
+            team: { members: { some: { userId } } },
+          },
+        },
+      },
+    ],
+  };
+}
+
+/**
+ * SUPER_ADMIN 이거나, 해당 프로젝트의 멤버이거나,
+ * `teamId` / `projectTeams`로 연결된 팀 중 한 곳이라도 팀원이면 true.
  */
 export async function canAccessProject(
   userId: string,
@@ -88,5 +107,13 @@ export async function canAccessProject(
     isSuperAdmin(userId),
     checkProjectPermission(userId, projectId),
   ]);
-  return admin || perm.isMember;
+  if (admin || perm.isMember) return true;
+
+  const row = await prisma.project.findFirst({
+    where: {
+      AND: [{ id: projectId }, projectWhereUserInLinkedTeams(userId)],
+    },
+    select: { id: true },
+  });
+  return Boolean(row);
 }

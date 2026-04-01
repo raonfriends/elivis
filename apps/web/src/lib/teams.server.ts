@@ -2,40 +2,15 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
+import type { ApiEnvelope } from "./api-envelope";
+import type { ApiTeamDetail, ApiTeamListItem, ApiTeamsListData } from "./map-api-team";
 import { apiUrl } from "./api";
 import { AT_COOKIE } from "./auth.server";
+import { apiFetchHeaders } from "./fetch-api-headers.server";
 
-export interface TeamListItem {
-    id: string;
-    name: string;
-    shortDescription: string | null;
-    introMessage: string | null;
-    bannerUrl: string | null;
-    hiddenFromUsers?: boolean;
-    createdById: string;
-    createdBy?: { id: string; email: string; name: string | null; avatarUrl: string | null };
-    createdAt: string;
-    updatedAt: string;
-    _count: { members: number };
-}
-
-interface ApiResponse<T> {
-    code: number;
-    message: string;
-    data: T;
-}
+export type TeamListItem = ApiTeamListItem;
 
 export type TeamsListKind = "my" | "public";
-
-async function buildHeaders() {
-    const jar = await cookies();
-    return {
-        Authorization: `Bearer ${jar.get(AT_COOKIE)?.value ?? ""}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "Accept-Language": jar.get("elivis_lang")?.value ?? "ko",
-    };
-}
 
 /**
  * 팀 목록: 내가 속한 팀 + 공개 팀(숨김 아님·내가 아직 멤버 아님)
@@ -47,8 +22,8 @@ export async function fetchTeamsList(input?: {
     take?: number;
     skip?: number;
 }): Promise<{
-    myTeams: TeamListItem[];
-    publicTeams: TeamListItem[];
+    myTeams: ApiTeamListItem[];
+    publicTeams: ApiTeamListItem[];
     myTotal: number;
     publicTotal: number;
 } | null> {
@@ -64,27 +39,33 @@ export async function fetchTeamsList(input?: {
         if (trimmed) params.set("q", trimmed);
 
         const res = await fetch(apiUrl(`/api/teams?${params.toString()}`), {
-            headers: await buildHeaders(),
+            headers: await apiFetchHeaders(),
             cache: "no-store",
         });
 
         if (!res.ok) return null;
 
-        const body = (await res.json()) as ApiResponse<Record<string, unknown>>;
+        const body = (await res.json()) as ApiEnvelope<ApiTeamsListData | Record<string, unknown>>;
         const d = body.data;
         if (!d || typeof d !== "object") return null;
 
         /** 신규 API: myTeams / publicTeams, 구버전 호환: items만 있으면 내 팀으로 간주 */
-        const myTeams = Array.isArray(d.myTeams)
-            ? (d.myTeams as TeamListItem[])
-            : Array.isArray(d.items)
-              ? (d.items as TeamListItem[])
+        const myTeams = Array.isArray((d as ApiTeamsListData).myTeams)
+            ? (d as ApiTeamsListData).myTeams
+            : Array.isArray((d as { items?: ApiTeamListItem[] }).items)
+              ? ((d as { items: ApiTeamListItem[] }).items)
               : [];
-        const publicTeams = Array.isArray(d.publicTeams) ? (d.publicTeams as TeamListItem[]) : [];
+        const publicTeams = Array.isArray((d as ApiTeamsListData).publicTeams)
+            ? (d as ApiTeamsListData).publicTeams
+            : [];
         const myTotal =
-            typeof d.myTotal === "number" ? d.myTotal : myTeams.length;
+            typeof (d as ApiTeamsListData).myTotal === "number"
+                ? (d as ApiTeamsListData).myTotal
+                : myTeams.length;
         const publicTotal =
-            typeof d.publicTotal === "number" ? d.publicTotal : publicTeams.length;
+            typeof (d as ApiTeamsListData).publicTotal === "number"
+                ? (d as ApiTeamsListData).publicTotal
+                : publicTeams.length;
 
         return { myTeams, publicTeams, myTotal, publicTotal };
     } catch {
@@ -96,45 +77,14 @@ export async function fetchTeams(q?: string) {
     return fetchTeamsList({ q });
 }
 
-export interface TeamMemberRow {
-    id: string;
-    role: "LEADER" | "MEMBER";
-    joinedAt: string;
-    user: { id: string; email: string; name: string | null; avatarUrl: string | null };
-}
-
-export interface TeamProjectRow {
-    id: string;
-    name: string;
-    description: string | null;
-    createdAt: string;
-    _count: { tasks: number; members: number };
-}
-
-export interface TeamDetail {
-    id: string;
-    name: string;
-    shortDescription: string | null;
-    introMessage: string | null;
-    bannerUrl: string | null;
-    /** 소개 탭 블록 레이아웃 JSON, 없으면 클라이언트 기본값 */
-    introLayoutJson: string | null;
-    /** 일반 사용자 전체 목록에서 숨김(SUPER_ADMIN은 전체 조회 시 표시) */
-    hiddenFromUsers: boolean;
-    createdById: string;
-    createdAt: string;
-    updatedAt: string;
-    createdBy: { id: string; email: string; name: string | null; avatarUrl: string | null };
-    members: TeamMemberRow[];
-    projects: TeamProjectRow[];
-    /** 현재 로그인 사용자의 팀 내 역할. null이면 공개 팀 페이지(비멤버) */
-    viewerRole: "LEADER" | "MEMBER" | null;
-    /** 비멤버 공개 조회 시 멤버 수 (멤버일 때는 생략 가능) */
-    _count?: { members: number };
-}
+export type {
+    ApiTeamDetail as TeamDetail,
+    ApiTeamMemberRow as TeamMemberRow,
+    ApiTeamProjectRow as TeamProjectRow,
+} from "./map-api-team";
 
 export type FetchTeamByIdResult =
-    | { ok: true; team: TeamDetail }
+    | { ok: true; team: ApiTeamDetail }
     | { ok: false; reason: "unauthorized" | "not_found" | "error" };
 
 /**
@@ -157,7 +107,7 @@ export async function fetchTeamById(teamId: string): Promise<FetchTeamByIdResult
 
     try {
         const res = await fetch(apiUrl(`/api/teams/${encodeURIComponent(trimmedId)}`), {
-            headers: await buildHeaders(),
+            headers: await apiFetchHeaders(),
             cache: "no-store",
         });
 
@@ -168,9 +118,9 @@ export async function fetchTeamById(teamId: string): Promise<FetchTeamByIdResult
             return { ok: false, reason: "not_found" };
         }
 
-        let body: ApiResponse<TeamDetail> | null = null;
+        let body: ApiEnvelope<ApiTeamDetail> | null = null;
         try {
-            body = (await res.json()) as ApiResponse<TeamDetail>;
+            body = (await res.json()) as ApiEnvelope<ApiTeamDetail>;
         } catch {
             return { ok: false, reason: "error" };
         }

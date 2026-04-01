@@ -34,8 +34,18 @@ export const MSG = {
     PROJECT_FETCHED: "server.project.fetched",
     PROJECT_MEMBER_ADDED: "server.project.memberAdded",
     PROJECT_NAME_REQUIRED: "server.project.nameRequired",
+    PROJECT_START_DATE_REQUIRED: "server.project.startDateRequired",
+    PROJECT_END_DATE_REQUIRED: "server.project.endDateRequired",
     PROJECT_NOT_FOUND: "server.project.notFound",
     PROJECT_TEAM_NOT_MEMBER: "server.project.teamNotMember",
+    PROJECT_TEAM_LEADER_ONLY: "server.project.teamLeaderOnly",
+    PROJECT_INVALID_DATES: "server.project.invalidDates",
+    PROJECT_DATE_INVALID: "server.project.dateInvalid",
+    PROJECT_PARTICIPANTS_INVALID: "server.project.participantsInvalid",
+    PROJECT_UPDATED: "server.project.updated",
+    PROJECT_DELETED: "server.project.deleted",
+    PROJECT_DELETE_NAME_MISMATCH: "server.project.deleteNameMismatch",
+    PROJECT_LEADER_ONLY: "server.project.leaderOnly",
 
     // ── 팀 ────────────────────────────────────────────────────────────────────
     TEAM_CREATED: "server.team.created",

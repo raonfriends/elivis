@@ -1,0 +1,155 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { cookies } from "next/headers";
+
+import { apiUrl } from "@/lib/api";
+import type { ApiEnvelope } from "@/lib/api-envelope";
+import { AT_COOKIE } from "@/lib/auth.server";
+import { apiFetchHeaders } from "@/lib/fetch-api-headers.server";
+import type { ApiIdPayload, ApiProjectDetail } from "@/lib/map-api-project";
+import { mapApiProjectToClient } from "@/lib/map-api-project";
+import type { Project } from "@/lib/projects";
+
+export async function getProjectDetailAction(projectId: string): Promise<Project | null> {
+    const jar = await cookies();
+    if (!jar.get(AT_COOKIE)?.value) return null;
+
+    try {
+        const res = await fetch(apiUrl(`/api/projects/${encodeURIComponent(projectId)}`), {
+            headers: await apiFetchHeaders(),
+            cache: "no-store",
+        });
+        if (!res.ok) return null;
+
+        const body = (await res.json()) as ApiEnvelope<ApiProjectDetail>;
+        return mapApiProjectToClient(body.data);
+    } catch {
+        return null;
+    }
+}
+
+export async function createProjectAction(input: {
+    name: string;
+    description?: string;
+    teamIds?: string[];
+    startDate?: string;
+    endDate?: string;
+    noEndDate?: boolean;
+    isPublic?: boolean;
+    participantUserIds?: string[];
+}): Promise<{ ok: true; projectId: string } | { ok: false; message: string }> {
+    const jar = await cookies();
+    if (!jar.get(AT_COOKIE)?.value) {
+        return { ok: false, message: "로그인이 필요합니다." };
+    }
+
+    try {
+        const res = await fetch(apiUrl("/api/projects"), {
+            method: "POST",
+            headers: await apiFetchHeaders(),
+            body: JSON.stringify({
+                name: input.name.trim(),
+                description: input.description?.trim() || undefined,
+                ...(input.teamIds?.length ? { teamIds: input.teamIds } : {}),
+                startDate: input.startDate?.trim() || undefined,
+                endDate: input.endDate?.trim() || undefined,
+                noEndDate: Boolean(input.noEndDate),
+                isPublic: input.isPublic !== false,
+                participantUserIds:
+                    input.participantUserIds?.length ? input.participantUserIds : undefined,
+            }),
+            cache: "no-store",
+        });
+
+        const body = (await res.json()) as ApiEnvelope<ApiIdPayload>;
+        if (!res.ok) {
+            return { ok: false, message: body.message ?? "프로젝트 생성에 실패했습니다." };
+        }
+
+        const projectId = body.data.id;
+        revalidatePath("/projects");
+        revalidatePath(`/projects/${projectId}`);
+        const teamPaths = input.teamIds?.length ? input.teamIds : [];
+        for (const tid of teamPaths) {
+            revalidatePath(`/teams/${tid}`);
+        }
+
+        return { ok: true, projectId };
+    } catch {
+        return { ok: false, message: "네트워크 오류가 발생했습니다." };
+    }
+}
+
+export async function updateProjectAction(
+    projectId: string,
+    input: {
+        name?: string;
+        description?: string | null;
+        isPublic?: boolean;
+        startDate?: string;
+        endDate?: string;
+        noEndDate?: boolean;
+    },
+): Promise<{ ok: true; project: Project } | { ok: false; message: string }> {
+    const jar = await cookies();
+    if (!jar.get(AT_COOKIE)?.value) {
+        return { ok: false, message: "로그인이 필요합니다." };
+    }
+
+    try {
+        const res = await fetch(apiUrl(`/api/projects/${encodeURIComponent(projectId)}`), {
+            method: "PATCH",
+            headers: await apiFetchHeaders(),
+            body: JSON.stringify(input),
+            cache: "no-store",
+        });
+
+        const body = (await res.json()) as ApiEnvelope<ApiProjectDetail>;
+        if (!res.ok) {
+            return { ok: false, message: body.message ?? "프로젝트 수정에 실패했습니다." };
+        }
+
+        const project = mapApiProjectToClient(body.data);
+        revalidatePath("/projects");
+        revalidatePath(`/projects/${projectId}`);
+        for (const t of project.teams) {
+            revalidatePath(`/teams/${t.teamId}`);
+        }
+
+        return { ok: true, project };
+    } catch {
+        return { ok: false, message: "네트워크 오류가 발생했습니다." };
+    }
+}
+
+export async function deleteProjectAction(
+    projectId: string,
+    confirmName: string,
+): Promise<{ ok: true } | { ok: false; message: string }> {
+    const jar = await cookies();
+    if (!jar.get(AT_COOKIE)?.value) {
+        return { ok: false, message: "로그인이 필요합니다." };
+    }
+
+    try {
+        const res = await fetch(apiUrl(`/api/projects/${encodeURIComponent(projectId)}`), {
+            method: "DELETE",
+            headers: await apiFetchHeaders(),
+            body: JSON.stringify({ confirmName: confirmName.trim() }),
+            cache: "no-store",
+        });
+
+        const parsed = (await res.json()) as ApiEnvelope<ApiIdPayload>;
+
+        if (!res.ok) {
+            return { ok: false, message: parsed.message ?? "프로젝트 삭제에 실패했습니다." };
+        }
+
+        revalidatePath("/projects");
+        revalidatePath(`/projects/${projectId}`);
+        return { ok: true };
+    } catch {
+        return { ok: false, message: "네트워크 오류가 발생했습니다." };
+    }
+}

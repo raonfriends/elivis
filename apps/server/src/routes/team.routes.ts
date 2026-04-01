@@ -23,11 +23,16 @@ export async function teamRoutes(app: FastifyInstance) {
     } = createTeamController(app);
 
     // `GET /teams`는 `GET /teams/:id`보다 먼저 등록 (파라미터 라우트와 충돌 방지)
-    app.get<{ Querystring: { q?: string; take?: string; skip?: string; kind?: string } }>(
-        "/teams",
-        { preHandler: [authenticateUser] },
-        listTeams,
-    );
+    app.get<{
+        Querystring: {
+            q?: string;
+            take?: string;
+            skip?: string;
+            kind?: string;
+            leaderOnly?: string;
+            myRole?: string;
+        };
+    }>("/teams", { preHandler: [authenticateUser] }, listTeams);
 
     app.post<{ Body: CreateTeamBody }>("/teams", { preHandler: [authenticateUser] }, createTeam);
 

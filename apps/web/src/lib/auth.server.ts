@@ -2,6 +2,8 @@ import "server-only";
 
 import { cookies } from "next/headers";
 
+import type { ApiEnvelope } from "./api-envelope";
+import type { ApiAuthLoginData, ApiAuthUser } from "./map-api-auth";
 import { apiUrl } from "./api";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -45,19 +47,7 @@ export async function getRefreshToken(): Promise<string | null> {
 // 로그인
 // ─────────────────────────────────────────────────────────────────────────────
 
-export interface LoginResult {
-    id: string;
-    email: string;
-    name: string | null;
-    systemRole: "SUPER_ADMIN" | "USER";
-}
-
-/** 표준 응답 래퍼 타입 */
-interface ApiResponse<T> {
-    code: number;
-    message: string;
-    data: T;
-}
+export type LoginResult = ApiAuthUser;
 
 export async function loginWithCredentials(email: string, password: string): Promise<LoginResult> {
     const lang = await getLangHeader();
@@ -72,11 +62,9 @@ export async function loginWithCredentials(email: string, password: string): Pro
         cache: "no-store",
     });
 
-    const body = (await res.json().catch(() => ({}))) as ApiResponse<{
-        accessToken: string;
-        refreshToken: string;
-        user: LoginResult;
-    }> & { message?: string };
+    const body = (await res.json().catch(() => ({}))) as ApiEnvelope<ApiAuthLoginData> & {
+        message?: string;
+    };
 
     if (!res.ok) {
         throw new Error(body.message ?? "로그인에 실패했습니다.");

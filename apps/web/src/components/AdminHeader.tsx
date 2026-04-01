@@ -5,16 +5,10 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { logoutAction } from "@/app/actions/auth";
-import { getApiBaseUrl } from "@/lib/api";
+import { toAvatarSrc } from "@/components/UserAvatar";
 import type { UserProfile } from "@/lib/user-types";
 import { LanguageSelector } from "./LanguageSelector";
 import { StatusDropdown } from "./StatusDropdown";
-
-function toAvatarSrc(url: string | null | undefined): string | null {
-    if (!url) return null;
-    if (url.startsWith("http")) return url;
-    return `${getApiBaseUrl()}${url}`;
-}
 
 interface AdminHeaderProps {
     onMenuClick: () => void;

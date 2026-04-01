@@ -1,0 +1,85 @@
+"use client";
+
+import { useState } from "react";
+
+import { getApiBaseUrl } from "@/lib/api";
+
+const AVATAR_PLACEHOLDER_COLORS = [
+    "#78716c",
+    "#3b82f6",
+    "#059669",
+    "#d97706",
+    "#7c3aed",
+    "#dc2626",
+];
+
+export function getAvatarColor(id: string): string {
+    let n = 0;
+    for (let i = 0; i < id.length; i++) n += id.charCodeAt(i);
+    return AVATAR_PLACEHOLDER_COLORS[n % AVATAR_PLACEHOLDER_COLORS.length];
+}
+
+export function getInitials(name: string): string {
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return (name[0] ?? "?").toUpperCase();
+}
+
+/**
+ * DB에 저장된 값은 보통 `/uploads/...` (로컬) 또는 S3/CDN 전체 URL.
+ * 웹은 Next `rewrites`로 `/uploads` → API 로 프록시하므로, 상대 경로면 같은 출처로 요청해
+ * 크로스 포트·일부 환경에서의 이미지 로드 실패를 줄입니다.
+ * `NEXT_PUBLIC_UPLOADS_SAME_ORIGIN=0` 이면 항상 `NEXT_PUBLIC_API_URL` 절대 URL (정적 export 등).
+ */
+export function toAvatarSrc(url: string | null | undefined): string | null {
+    if (!url) return null;
+    const trimmed = url.trim();
+    if (!trimmed) return null;
+    if (/^https?:\/\//i.test(trimmed)) return trimmed;
+
+    const path = trimmed.startsWith("/") ? trimmed : `/${trimmed}`;
+    const sameOrigin =
+        typeof process.env.NEXT_PUBLIC_UPLOADS_SAME_ORIGIN === "undefined" ||
+        process.env.NEXT_PUBLIC_UPLOADS_SAME_ORIGIN !== "0";
+    if (sameOrigin && path.startsWith("/uploads/")) {
+        return path;
+    }
+    return `${getApiBaseUrl().replace(/\/$/, "")}${path}`;
+}
+
+export function UserAvatar({
+    userId,
+    label,
+    avatarUrl,
+    sizeClass,
+    ringClass = "ring-2 ring-white",
+}: {
+    userId: string;
+    label: string;
+    avatarUrl: string | null | undefined;
+    sizeClass: string;
+    ringClass?: string;
+}) {
+    const [imgError, setImgError] = useState(false);
+    const src = toAvatarSrc(avatarUrl);
+    const showImg = Boolean(src && !imgError);
+
+    return (
+        <div
+            className={`${sizeClass} shrink-0 rounded-full ${ringClass} flex items-center justify-center font-semibold text-white shadow-sm overflow-hidden`}
+            style={!showImg ? { backgroundColor: getAvatarColor(userId) } : undefined}
+            title={label}
+        >
+            {showImg ? (
+                <img
+                    src={src!}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    onError={() => setImgError(true)}
+                />
+            ) : (
+                getInitials(label)
+            )}
+        </div>
+    );
+}

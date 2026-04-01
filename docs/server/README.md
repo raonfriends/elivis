@@ -159,10 +159,23 @@ POST /api/auth/signup
 | Method | Path | 인증 | 권한 | 설명 |
 |--------|------|------|------|------|
 | `POST` | `/api/projects` | Bearer | 로그인 유저 | 프로젝트 생성 (생성자 자동 LEADER) |
-| `GET` | `/api/projects/:projectId` | Bearer | 프로젝트 멤버 | 프로젝트 상세 조회 |
+| `GET` | `/api/projects/:projectId` | Bearer | 프로젝트 멤버 또는 연결 팀 팀원 | 프로젝트 상세 조회 |
 | `POST` | `/api/projects/:projectId/members` | Bearer | LEADER·DEPUTY_LEADER | 멤버 초대 |
 
 ---
+
+## 데이터 모델 메모
+
+### TeamMember 기본키
+
+`TeamMember`는 별도 `id` 없이 **복합 기본키 `(teamId, userId)`**를 사용합니다.
+
+### 공개 ID 규칙
+
+- **Team**: `t-xxxxxxxx`
+- **Project**: `prj-xxxxxxxx`
+
+`xxxxxxxx`는 8자리 영문 대소문자 + 숫자 조합입니다.
 
 ### 관리자 (`/api/admin`)
 

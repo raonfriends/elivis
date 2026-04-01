@@ -31,9 +31,20 @@ export const ko = {
       created:      "프로젝트가 생성되었습니다.",
       fetched:      "프로젝트 조회가 완료되었습니다.",
       memberAdded:  "멤버가 추가되었습니다.",
-      nameRequired: "name 필드는 필수입니다.",
+      nameRequired: "프로젝트 명은 필수입니다.",
+      startDateRequired: "시작일은 필수입니다.",
+      endDateRequired: "종료일을 입력하거나 종료일 미정을 선택해 주세요.",
       notFound:     "프로젝트를 찾을 수 없습니다.",
       teamNotMember: "해당 팀의 멤버만 팀에 프로젝트를 연결할 수 있습니다.",
+      teamLeaderOnly:
+        "프로젝트에 팀을 연결하려면 해당 팀의 팀장이어야 합니다.",
+      invalidDates: "종료일은 시작일 이후여야 합니다.",
+      dateInvalid: "날짜 형식이 올바르지 않습니다.",
+      participantsInvalid: "참여자로 지정할 수 없는 사용자가 포함되어 있습니다.",
+      updated: "프로젝트 정보가 수정되었습니다.",
+      deleted: "프로젝트가 삭제되었습니다.",
+      deleteNameMismatch: "프로젝트 이름이 일치하지 않습니다.",
+      leaderOnly: "프로젝트 리더만 이 작업을 수행할 수 있습니다.",
     },
     team: {
       created:       "팀이 생성되었습니다.",
@@ -165,6 +176,7 @@ export const ko = {
       detail: {
         common: {
           cancel: "취소",
+          close: "닫기",
           delete: "삭제",
           deleting: "삭제 중…",
           back: "이전",

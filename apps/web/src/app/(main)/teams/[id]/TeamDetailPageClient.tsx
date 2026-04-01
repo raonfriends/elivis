@@ -10,7 +10,7 @@ import { TeamIntroEditModal } from "./TeamIntroEditModal";
 import { TeamIntroPageContent, type TeamIntroPageContentHandle } from "./TeamIntroPageContent";
 import { TeamIntroBannerBlock } from "./TeamIntroBannerBlock";
 import { deleteTeamAction, updateTeamFieldsAction } from "@/app/actions/teams";
-import { getApiBaseUrl } from "@/lib/api";
+import { UserAvatar } from "@/components/UserAvatar";
 import type { TeamDetail, TeamMemberRow } from "@/lib/teams.server";
 
 type TeamTab = "intro" | "projects" | "members" | "settings";
@@ -81,7 +81,7 @@ function TeamPublicDetail({ team }: { team: TeamDetail }) {
             </div>
 
             <div className="min-h-0 flex-1 p-4 sm:p-5 md:p-6">
-                <TeamIntroPageContent team={team} onEditIntroClick={() => {}} />
+                <TeamIntroPageContent team={team} />
             </div>
         </div>
     );
@@ -325,69 +325,6 @@ function truncateText(str: string, maxLen: number): string {
 }
 
 const AVATAR_STACK_MAX = 4;
-const AVATAR_PLACEHOLDER_COLORS = [
-    "#78716c",
-    "#3b82f6",
-    "#059669",
-    "#d97706",
-    "#7c3aed",
-    "#dc2626",
-];
-
-function getAvatarColor(id: string): string {
-    let n = 0;
-    for (let i = 0; i < id.length; i++) n += id.charCodeAt(i);
-    return AVATAR_PLACEHOLDER_COLORS[n % AVATAR_PLACEHOLDER_COLORS.length];
-}
-
-function getInitials(name: string): string {
-    const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return (name[0] ?? "?").toUpperCase();
-}
-
-function toAvatarSrc(url: string | null | undefined): string | null {
-    if (!url) return null;
-    if (url.startsWith("http")) return url;
-    return `${getApiBaseUrl()}${url}`;
-}
-
-function UserAvatar({
-    userId,
-    label,
-    avatarUrl,
-    sizeClass,
-    ringClass = "ring-2 ring-white",
-}: {
-    userId: string;
-    label: string;
-    avatarUrl: string | null | undefined;
-    sizeClass: string;
-    ringClass?: string;
-}) {
-    const [imgError, setImgError] = useState(false);
-    const src = toAvatarSrc(avatarUrl);
-    const showImg = Boolean(src && !imgError);
-
-    return (
-        <div
-            className={`${sizeClass} shrink-0 rounded-full ${ringClass} flex items-center justify-center font-semibold text-white shadow-sm overflow-hidden`}
-            style={!showImg ? { backgroundColor: getAvatarColor(userId) } : undefined}
-            title={label}
-        >
-            {showImg ? (
-                <img
-                    src={src!}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    onError={() => setImgError(true)}
-                />
-            ) : (
-                getInitials(label)
-            )}
-        </div>
-    );
-}
 
 function displayUserName(u: { name: string | null; email: string }): string {
     return u.name?.trim() || u.email.split("@")[0] || u.email;
@@ -445,7 +382,7 @@ export function TeamDetailPageClient({ team }: { team: TeamDetail }) {
     const router = useRouter();
     const t = useTranslations("teams.detail");
     const [activeTab, setActiveTab] = useState<TeamTab>("intro");
-    const [participantsOpen, setParticipantsOpen] = useState(false);
+    const [membersModalOpen, setMembersModalOpen] = useState(false);
     const [memberModalOpen, setMemberModalOpen] = useState(false);
     const [composeChangeOpen, setComposeChangeOpen] = useState(false);
     const [introEditOpen, setIntroEditOpen] = useState(false);
@@ -530,54 +467,86 @@ export function TeamDetailPageClient({ team }: { team: TeamDetail }) {
                             {team.shortDescription?.trim() || t("header.shortDescriptionFallback")}
                         </p>
                     </div>
-                    <div
-                        className="relative shrink-0 pl-3"
-                        onMouseEnter={() => setParticipantsOpen(true)}
-                        onMouseLeave={() => setParticipantsOpen(false)}
-                    >
-                        <div className="flex cursor-default items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-stone-100">
+                    <>
+                        <button
+                            type="button"
+                            onClick={() => setMembersModalOpen(true)}
+                            className="relative shrink-0 flex cursor-pointer items-center gap-3 rounded-lg px-2 py-1.5 pl-3 text-left transition-colors hover:bg-stone-100"
+                            aria-haspopup="dialog"
+                            aria-expanded={membersModalOpen}
+                        >
                             <span className="whitespace-nowrap text-sm font-medium text-stone-600">
                                 {t("labels.membersTotal", { count: team.members.length })}
                             </span>
                             {stackMembers.length > 0 && (
                                 <AvatarStack members={stackMembers} size="md" />
                             )}
-                        </div>
-                        {stackMembers.length > 0 && participantsOpen && (
-                            <div className="absolute right-0 top-full z-50 mt-1.5 min-w-[220px] overflow-hidden rounded-xl border border-stone-200 bg-white py-2 shadow-lg">
-                                <p className="px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-stone-400">
-                                    {t("labels.members")}
-                                </p>
-                                <ul className="max-h-64 overflow-y-auto">
-                                    {team.members.map((m) => (
-                                        <li
-                                            key={m.id}
-                                            className="flex items-center gap-3 px-3 py-2 text-sm text-stone-700 hover:bg-stone-50"
+                        </button>
+
+                        {membersModalOpen && (
+                            <>
+                                <div
+                                    className="fixed inset-0 z-40 bg-stone-900/40"
+                                    aria-hidden
+                                    onClick={() => setMembersModalOpen(false)}
+                                />
+                                <div
+                                    className="fixed left-1/2 top-1/2 z-50 flex max-h-[min(80vh,520px)] w-full max-w-md -translate-x-1/2 -translate-y-1/2 flex-col rounded-2xl border border-stone-200 bg-white shadow-xl"
+                                    role="dialog"
+                                    aria-modal
+                                    aria-labelledby="team-members-modal-title"
+                                >
+                                    <div className="border-b border-stone-100 px-5 py-4">
+                                        <h2
+                                            id="team-members-modal-title"
+                                            className="text-base font-semibold text-stone-800"
                                         >
-                                            <UserAvatar
-                                                userId={m.user.id}
-                                                label={displayUserName(m.user)}
-                                                avatarUrl={m.user.avatarUrl}
-                                                sizeClass="h-8 w-8 text-xs"
-                                                ringClass="ring-0"
-                                            />
-                                            <div className="min-w-0 flex-1 truncate">
-                                                <span className="font-medium text-stone-800">
-                                                    {displayUserName(m.user)}
+                                            {t("labels.members")}
+                                        </h2>
+                                        <p className="mt-0.5 text-sm text-stone-500">
+                                            {t("labels.membersTotal", { count: team.members.length })}
+                                        </p>
+                                    </div>
+                                    <ul className="min-h-0 flex-1 overflow-y-auto px-3 py-2">
+                                        {team.members.map((m) => (
+                                            <li
+                                                key={m.user.id}
+                                                className="flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm text-stone-700"
+                                            >
+                                                <UserAvatar
+                                                    userId={m.user.id}
+                                                    label={displayUserName(m.user)}
+                                                    avatarUrl={m.user.avatarUrl}
+                                                    sizeClass="h-10 w-10 text-sm"
+                                                    ringClass="ring-0"
+                                                />
+                                                <div className="min-w-0 flex-1 truncate">
+                                                    <span className="font-medium text-stone-800">
+                                                        {displayUserName(m.user)}
+                                                    </span>
+                                                    <p className="truncate text-xs text-stone-500">
+                                                        {m.user.email}
+                                                    </p>
+                                                </div>
+                                                <span className="shrink-0 text-xs text-stone-500">
+                                                    {t(`roles.${roleLabel(m.role)}` as any)}
                                                 </span>
-                                                <p className="truncate text-xs text-stone-500">
-                                                    {m.user.email}
-                                                </p>
-                                            </div>
-                                            <span className="shrink-0 text-xs text-stone-400">
-                                                {t(`roles.${roleLabel(m.role)}` as any)}
-                                            </span>
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <div className="border-t border-stone-100 px-5 py-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setMembersModalOpen(false)}
+                                            className="w-full rounded-lg border border-stone-200 py-2 text-sm font-medium text-stone-700 hover:bg-stone-50"
+                                        >
+                                            {t("common.close")}
+                                        </button>
+                                    </div>
+                                </div>
+                            </>
                         )}
-                    </div>
+                    </>
                 </div>
             </div>
 
@@ -678,7 +647,7 @@ export function TeamDetailPageClient({ team }: { team: TeamDetail }) {
                                 </p>
                             </div>
                             <Link
-                                href={`/projects/new?teamId=${encodeURIComponent(team.id)}`}
+                                href={`/projects/new?teamIds=${encodeURIComponent(team.id)}`}
                                 className="inline-flex shrink-0 items-center justify-center rounded-lg bg-stone-800 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-stone-700"
                             >
                                 {t("projects.create")}
@@ -778,7 +747,6 @@ export function TeamDetailPageClient({ team }: { team: TeamDetail }) {
                         <TeamIntroPageContent
                             ref={introRef}
                             team={team}
-                            onEditIntroClick={() => setIntroEditOpen(true)}
                             onLayoutEditModeChange={setIntroLayoutEditMode}
                         />
                     </div>
@@ -857,7 +825,7 @@ export function TeamDetailPageClient({ team }: { team: TeamDetail }) {
                                 </thead>
                                 <tbody className="text-stone-600">
                                     {team.members.map((m) => (
-                                        <tr key={m.id} className="border-b border-stone-100">
+                                        <tr key={m.user.id} className="border-b border-stone-100">
                                             <td className="py-3 pr-4">
                                                 <div className="flex items-center gap-3">
                                                     <UserAvatar
@@ -900,7 +868,7 @@ export function TeamDetailPageClient({ team }: { team: TeamDetail }) {
                                             "flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                                             "whitespace-nowrap lg:w-full",
                                             isActive
-                                                ? "bg-stone-100 text-stone-800"
+                                                ? "bg-stone-200 text-stone-900"
                                                 : "text-stone-500 hover:bg-stone-50 hover:text-stone-700",
                                         ].join(" ")}
                                     >
