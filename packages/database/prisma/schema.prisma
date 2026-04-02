@@ -44,6 +44,17 @@ enum WorkspaceViewType {
   BOARD /// 보드(칸반) 뷰
 }
 
+/// 알림 종류
+enum NotificationType {
+  TASK_ASSIGNED        /// 업무 할당됨
+  TASK_COMMENT         /// 업무에 댓글 달림
+  TASK_DUE_SOON        /// 업무 마감 임박
+  PROJECT_MEMBER_ADDED /// 프로젝트에 멤버 추가됨
+  TEAM_MEMBER_ADDED    /// 팀에 멤버 추가됨
+  MENTION              /// 언급됨
+  SYSTEM               /// 시스템 알림
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Models
 // ─────────────────────────────────────────────────────────────────────────────
@@ -70,6 +81,7 @@ model User {
   workspaceTasks      WorkspaceTask[]
   taskComments        WorkspaceTaskComment[]
   taskAttachments     WorkspaceTaskAttachment[]
+  notifications       Notification[]
 }
 
 model Project {
@@ -346,4 +358,29 @@ model WorkspaceView {
   /// 워크스페이스당 뷰 타입은 1개
   @@unique([workspaceId, type])
   @@index([workspaceId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 알림
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// 사용자별 알림
+model Notification {
+  /// 앱에서 `generatePublicId()`로 발급 (8자 영숫자)
+  id        String           @id
+  /// 수신 대상 유저
+  userId    String
+  type      NotificationType
+  title     String
+  message   String?
+  /// 연관 리소스 JSON (예: { "taskId": "abc", "workspaceId": "ws-xyz" })
+  data      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([userId, isRead])
+  @@index([createdAt(sort: Desc)])
 }

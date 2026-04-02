@@ -14,9 +14,10 @@ interface AppHeaderProps {
     onMenuClick: () => void;
     title?: string;
     user?: UserProfile | null;
+    notificationSlot?: React.ReactNode;
 }
 
-export function AppHeader({ onMenuClick, title = "", user }: AppHeaderProps) {
+export function AppHeader({ onMenuClick, title = "", user, notificationSlot }: AppHeaderProps) {
     const t = useTranslations("header");
     const tCommon = useTranslations("common");
 
@@ -93,10 +94,13 @@ export function AppHeader({ onMenuClick, title = "", user }: AppHeaderProps) {
                 </div>
             </div>
 
-            {/* 우측: 언어 + 프로필 */}
+            {/* 우측: 언어 + 알림 + 프로필 */}
             <div className="flex items-center gap-1 shrink-0">
                 {/* 언어 전환 드롭다운 */}
                 <LanguageSelector variant="header" align="right" />
+
+                {/* 알림 벨 (슬롯) */}
+                {notificationSlot}
 
                 {/* 프로필 드롭다운 */}
                 <div ref={userMenuRef} className="relative">

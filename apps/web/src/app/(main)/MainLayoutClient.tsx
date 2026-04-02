@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TopLoadingBar } from "@/components/TopLoadingBar";
+import { NotificationBell } from "@/components/notifications/NotificationBell";
 import type { UserProfile } from "@/lib/users";
 import type { ApiWorkspaceListItem } from "@/lib/map-api-workspace";
 import { UserStatusProvider } from "@/context/UserStatusContext";
@@ -36,9 +37,10 @@ interface MainLayoutClientProps {
   children: React.ReactNode;
   user: UserProfile | null;
   workspaces: ApiWorkspaceListItem[];
+  accessToken: string | null;
 }
 
-export function MainLayoutClient({ children, user, workspaces }: MainLayoutClientProps) {
+export function MainLayoutClient({ children, user, workspaces, accessToken }: MainLayoutClientProps) {
   const [sidebarOpen, setSidebarOpen]   = useState(false);
   const [sidebarSize, setSidebarSize]   = useState<"expanded" | "collapsed" | "hidden">("expanded");
   const pathname = usePathname();
@@ -61,6 +63,7 @@ export function MainLayoutClient({ children, user, workspaces }: MainLayoutClien
             onMenuClick={() => setSidebarOpen((o) => !o)}
             title={title}
             user={user}
+            notificationSlot={<NotificationBell accessToken={accessToken} />}
           />
           <main className="relative z-0 min-h-0 flex-1 overflow-auto">{children}</main>
         </div>

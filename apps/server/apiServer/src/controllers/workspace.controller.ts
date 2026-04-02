@@ -4,6 +4,7 @@ import { t } from "@repo/i18n";
 
 import { MSG } from "../utils/messages";
 import { badRequest, conflict, forbidden, notFound, ok, created } from "../utils/response";
+import { publishNotification } from "../utils/notify";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 요청 바디 / 파라미터 타입
@@ -814,6 +815,28 @@ export function createWorkspaceController(app: FastifyInstance) {
                 },
             },
         });
+
+        // 담당자가 변경됐고, 나 자신이 아닌 다른 사람에게 할당한 경우 알림 발행
+        if (
+            body.assigneeId &&
+            body.assigneeId !== request.userId
+        ) {
+            const assigner = await app.prisma.user.findUnique({
+                where: { id: request.userId },
+                select: { name: true, email: true },
+            });
+            const assignerName = assigner?.name ?? assigner?.email ?? "누군가";
+
+            void publishNotification(app.redis, {
+                userId: body.assigneeId,
+                type: "TASK_ASSIGNED",
+                title: "새 업무가 할당되었습니다",
+                message: `${assignerName}님이 '${updated.title}' 업무를 할당했습니다.`,
+                data: { taskId: updated.id, workspaceId },
+            }).catch((err) =>
+                app.log.error({ err }, "Failed to publish task assignment notification"),
+            );
+        }
 
         const taskWithStatus = await withStatus(app, updated);
         return reply.send(ok(taskWithStatus, t(lang, MSG.WORKSPACE_TASK_UPDATED)));
