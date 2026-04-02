@@ -7,7 +7,7 @@ import { apiUrl } from "@/lib/api";
 import type { ApiEnvelope } from "@/lib/api-envelope";
 import { AT_COOKIE } from "@/lib/auth.server";
 import { apiFetchHeaders } from "@/lib/fetch-api-headers.server";
-import type { ApiIdPayload, ApiProjectDetail } from "@/lib/map-api-project";
+import type { ApiIdPayload, ApiProjectDetail, ApiProjectFavoriteItem } from "@/lib/map-api-project";
 import { mapApiProjectToClient } from "@/lib/map-api-project";
 import type { Project } from "@/lib/projects";
 
@@ -151,5 +151,86 @@ export async function deleteProjectAction(
         return { ok: true };
     } catch {
         return { ok: false, message: "네트워크 오류가 발생했습니다." };
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 프로젝트 즐겨찾기
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function fetchProjectFavoritesAction(): Promise<{
+    ok: true;
+    favorites: ApiProjectFavoriteItem[];
+} | { ok: false; message: string }> {
+    try {
+        const res = await fetch(apiUrl("/api/projects/favorites"), {
+            headers: await apiFetchHeaders(),
+            cache: "no-store",
+        });
+        const body = (await res.json()) as ApiEnvelope<ApiProjectFavoriteItem[]>;
+        if (!res.ok) return { ok: false, message: body.message ?? "즐겨찾기를 불러오지 못했습니다." };
+        return { ok: true, favorites: body.data ?? [] };
+    } catch {
+        return { ok: false, message: "네트워크 오류가 발생했습니다." };
+    }
+}
+
+export async function addProjectFavoriteAction(projectId: string): Promise<{
+    ok: boolean;
+    message?: string;
+    favorite?: ApiProjectFavoriteItem;
+}> {
+    try {
+        const res = await fetch(
+            apiUrl(`/api/projects/${encodeURIComponent(projectId)}/favorite`),
+            {
+                method: "POST",
+                headers: await apiFetchHeaders(),
+                body: JSON.stringify({}),
+            },
+        );
+        const body = (await res.json()) as ApiEnvelope<ApiProjectFavoriteItem>;
+        if (!res.ok) return { ok: false, message: body.message };
+        revalidatePath("/projects");
+        revalidatePath(`/projects/${projectId}`);
+        return { ok: true, favorite: body.data };
+    } catch {
+        return { ok: false, message: "네트워크 오류가 발생했습니다." };
+    }
+}
+
+export async function removeProjectFavoriteAction(projectId: string): Promise<{
+    ok: boolean;
+    message?: string;
+}> {
+    try {
+        const res = await fetch(
+            apiUrl(`/api/projects/${encodeURIComponent(projectId)}/favorite`),
+            {
+                method: "DELETE",
+                headers: await apiFetchHeaders(),
+                body: JSON.stringify({}),
+            },
+        );
+        const body = (await res.json()) as ApiEnvelope<null>;
+        if (!res.ok) return { ok: false, message: body.message };
+        revalidatePath("/projects");
+        revalidatePath(`/projects/${projectId}`);
+        return { ok: true };
+    } catch {
+        return { ok: false, message: "네트워크 오류가 발생했습니다." };
+    }
+}
+
+export async function checkProjectFavoriteAction(projectId: string): Promise<boolean> {
+    try {
+        const res = await fetch(
+            apiUrl(`/api/projects/${encodeURIComponent(projectId)}/favorite/status`),
+            { headers: await apiFetchHeaders(), cache: "no-store" },
+        );
+        const body = (await res.json()) as ApiEnvelope<{ isFavorite: boolean }>;
+        return body.data?.isFavorite ?? false;
+    } catch {
+        return false;
     }
 }

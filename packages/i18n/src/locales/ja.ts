@@ -224,6 +224,7 @@ export const ja = {
           intro: "紹介",
           projects: "プロジェクト",
           members: "メンバー",
+          community: "コミュニティ",
           settings: "設定",
         },
         roles: {
@@ -316,10 +317,19 @@ export const ja = {
           adding: "追加中…",
           add: "追加",
         },
+        community: {
+          title: "コミュニティ",
+          desc: "チームメンバーとニュースや意見を共有しましょう。",
+          emptyTitle: "まだ投稿がありません。",
+          emptyDesc: "最初の投稿を作成して会話を始めましょう。",
+          writePost: "投稿を書く",
+          comingSoon: "コミュニティ機能は近日公開予定です。",
+        },
         settings: {
           subTabs: {
             team: "チーム設定",
             security: "セキュリティ",
+            activityLog: "アクティビティ",
           },
           team: {
             name: {

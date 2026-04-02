@@ -8,6 +8,7 @@ import {
     type DelegateLeaderBody,
     type UpdateTeamBody,
 } from "../controllers/team.controller";
+import { createTeamFavoriteController } from "../controllers/teamFavorite.controller";
 import { authenticateUser } from "../middleware/auth";
 
 export async function teamRoutes(app: FastifyInstance) {
@@ -93,5 +94,29 @@ export async function teamRoutes(app: FastifyInstance) {
         "/teams/:id/leader",
         { preHandler: [authenticateUser] },
         delegateLeader,
+    );
+
+    // ── 즐겨찾기 ────────────────────────────────────────────────────────────
+    const { listFavorites, addFavorite, removeFavorite, checkFavorite } =
+        createTeamFavoriteController(app);
+
+    app.get("/teams/favorites", { preHandler: [authenticateUser] }, listFavorites);
+
+    app.get<{ Params: { id: string } }>(
+        "/teams/:id/favorite/status",
+        { preHandler: [authenticateUser] },
+        checkFavorite,
+    );
+
+    app.post<{ Params: { id: string } }>(
+        "/teams/:id/favorite",
+        { preHandler: [authenticateUser] },
+        addFavorite,
+    );
+
+    app.delete<{ Params: { id: string } }>(
+        "/teams/:id/favorite",
+        { preHandler: [authenticateUser] },
+        removeFavorite,
     );
 }

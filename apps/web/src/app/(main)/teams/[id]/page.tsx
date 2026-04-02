@@ -1,6 +1,8 @@
 import { notFound, redirect } from "next/navigation";
 
 import { fetchTeamById } from "@/lib/teams.server";
+import { checkTeamFavoriteAction } from "@/app/actions/teams";
+import { getMyProfile } from "@/lib/users";
 
 import { TeamDetailLoadError } from "./TeamDetailLoadError";
 import { TeamDetailPageClient } from "./TeamDetailPageClient";
@@ -14,7 +16,11 @@ export default async function TeamDetailPage({
     params: Promise<{ id: string }>;
 }) {
     const { id } = await params;
-    const result = await fetchTeamById(id);
+    const [result, isFavorite, user] = await Promise.all([
+        fetchTeamById(id),
+        checkTeamFavoriteAction(id),
+        getMyProfile(),
+    ]);
 
     if (!result.ok) {
         if (result.reason === "unauthorized") {
@@ -26,5 +32,13 @@ export default async function TeamDetailPage({
         return <TeamDetailLoadError />;
     }
 
-    return <TeamDetailPageClient team={result.team} />;
+    const isSuperAdmin = user?.systemRole === "SUPER_ADMIN";
+
+    return (
+        <TeamDetailPageClient
+            team={result.team}
+            isFavorite={isFavorite}
+            isSuperAdmin={isSuperAdmin}
+        />
+    );
 }

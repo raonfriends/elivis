@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { ProjectListItem } from "@/lib/projects.server";
+import { ProjectFavoriteButton } from "@/components/ProjectFavoriteButton";
 
 const MY_PAGE_SIZE = 10;
 
@@ -12,7 +13,15 @@ function truncate(str: string, maxLen: number): string {
     return str.slice(0, maxLen) + "…";
 }
 
-function ProjectCard({ project, compact }: { project: ProjectListItem; compact?: boolean }) {
+function ProjectCard({
+    project,
+    compact,
+    isFavorite = false,
+}: {
+    project: ProjectListItem;
+    compact?: boolean;
+    isFavorite?: boolean;
+}) {
     const seenTeamIds = new Set<string>();
     const tags = [
         ...(project.team ? [project.team] : []),
@@ -26,30 +35,30 @@ function ProjectCard({ project, compact }: { project: ProjectListItem; compact?:
     const isPersonal = tags.length === 0;
 
     return (
-        <li>
-            <Link
-                href={`/projects/${project.id}`}
-                className={`group flex items-start gap-4 rounded-xl border border-stone-200 bg-white transition-all hover:border-stone-300 hover:shadow-md ${
-                    compact ? "p-3 sm:p-4" : "p-4 sm:p-5"
-                }`}
-            >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-stone-100 text-stone-500 transition-colors group-hover:bg-stone-200 group-hover:text-stone-600 sm:h-11 sm:w-11">
-                    <svg
-                        className="h-5 w-5 sm:h-6 sm:w-6"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={1.5}
-                        stroke="currentColor"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"
-                        />
-                    </svg>
-                </span>
-                <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 items-center gap-2">
+        <li className="group rounded-xl border border-stone-200 bg-white transition-all hover:border-stone-300 hover:shadow-md">
+            <div className={`flex items-start gap-4 ${compact ? "p-3 sm:p-4" : "p-4 sm:p-5"}`}>
+                {/* 아이콘 — 클릭 시 프로젝트 이동 */}
+                <Link href={`/projects/${project.id}`} tabIndex={-1} className="shrink-0">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-stone-100 text-stone-500 transition-colors group-hover:bg-stone-200 group-hover:text-stone-600 sm:h-11 sm:w-11">
+                        <svg
+                            className="h-5 w-5 sm:h-6 sm:w-6"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            strokeWidth={1.5}
+                            stroke="currentColor"
+                        >
+                            <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z"
+                            />
+                        </svg>
+                    </span>
+                </Link>
+
+                {/* 텍스트 영역 */}
+                <Link href={`/projects/${project.id}`} className="min-w-0 flex-1 block">
+                    <div className="flex min-w-0 items-center gap-1.5">
                         <h3
                             className={`min-w-0 truncate font-semibold text-stone-800 transition-colors group-hover:text-stone-900 ${
                                 compact ? "text-sm" : ""
@@ -57,6 +66,7 @@ function ProjectCard({ project, compact }: { project: ProjectListItem; compact?:
                         >
                             {project.name || "이름 없음"}
                         </h3>
+                        <ProjectFavoriteButton projectId={project.id} initialIsFavorite={isFavorite} size="md" />
                         {isPersonal ? (
                             <span className="shrink-0 rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-600">
                                 개인 프로젝트
@@ -102,23 +112,15 @@ function ProjectCard({ project, compact }: { project: ProjectListItem; compact?:
                             </span>
                         </div>
                     </div>
-                </div>
-                <span className="shrink-0 text-stone-400 transition-transform group-hover:translate-x-0.5">
-                    <svg
-                        className="h-5 w-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={2}
-                        stroke="currentColor"
-                    >
-                        <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M8.25 4.5l7.5 7.5-7.5 7.5"
-                        />
+                </Link>
+
+                {/* 화살표 */}
+                <Link href={`/projects/${project.id}`} tabIndex={-1} className="shrink-0 self-center text-stone-300 transition-transform group-hover:translate-x-0.5">
+                    <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
                     </svg>
-                </span>
-            </Link>
+                </Link>
+            </div>
         </li>
     );
 }
@@ -129,13 +131,16 @@ export function ProjectsPageClient({
     adminOnlyProjects = [],
     isAdmin = false,
     searchQuery,
+    favoriteProjectIds: favoriteProjectIdsProp,
 }: {
     myProjects: ProjectListItem[];
     otherProjects: ProjectListItem[];
     adminOnlyProjects?: ProjectListItem[];
     isAdmin?: boolean;
     searchQuery: string;
+    favoriteProjectIds?: Set<string>;
 }) {
+    const favoriteProjectIds = favoriteProjectIdsProp ?? new Set<string>();
     const [currentPage, setCurrentPage] = useState(1);
 
     const totalPages = Math.max(1, Math.ceil(myProjects.length / MY_PAGE_SIZE));
@@ -261,7 +266,11 @@ export function ProjectsPageClient({
                             ) : (
                                 <ul className="mt-4 space-y-3">
                                     {pageList.map((project) => (
-                                        <ProjectCard key={project.id} project={project} />
+                                        <ProjectCard
+                                            key={project.id}
+                                            project={project}
+                                            isFavorite={favoriteProjectIds.has(project.id)}
+                                        />
                                     ))}
                                 </ul>
                             )}
@@ -284,7 +293,12 @@ export function ProjectsPageClient({
                                 </p>
                                 <ul className="mt-3 space-y-2">
                                     {otherProjects.map((project) => (
-                                        <ProjectCard key={project.id} project={project} compact />
+                                        <ProjectCard
+                                            key={project.id}
+                                            project={project}
+                                            compact
+                                            isFavorite={favoriteProjectIds.has(project.id)}
+                                        />
                                     ))}
                                 </ul>
                             </section>
@@ -312,7 +326,12 @@ export function ProjectsPageClient({
                                 </p>
                                 <ul className="mt-3 space-y-2">
                                     {adminOnlyProjects.map((project) => (
-                                        <ProjectCard key={project.id} project={project} compact />
+                                        <ProjectCard
+                                            key={project.id}
+                                            project={project}
+                                            compact
+                                            isFavorite={favoriteProjectIds.has(project.id)}
+                                        />
                                     ))}
                                 </ul>
                             </section>

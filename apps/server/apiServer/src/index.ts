@@ -11,6 +11,7 @@ import Fastify from "fastify";
 import { prismaPlugin } from "./plugins/prisma";
 import { redisPlugin } from "./plugins/redis";
 import { adminRoutes } from "./routes/admin.routes";
+import { notificationRoutes } from "./routes/notification.routes";
 import { authRoutes } from "./routes/auth.routes";
 import { healthRoutes } from "./routes/health.routes";
 import { projectRoutes } from "./routes/project.routes";
@@ -82,7 +83,8 @@ async function main() {
   await app.register(projectRoutes, { prefix: "/api" });
   await app.register(teamRoutes,      { prefix: "/api" });
   await app.register(workspaceRoutes, { prefix: "/api" });
-  await app.register(adminRoutes,     { prefix: "/api" });
+  await app.register(adminRoutes,         { prefix: "/api" });
+  await app.register(notificationRoutes,  { prefix: "/api" });
 
   // ── 최초 설치 토큰 출력 (DB에 유저가 0명일 때만) ──────────────────────────
   app.addHook("onReady", async () => {

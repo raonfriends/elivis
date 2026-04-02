@@ -5,6 +5,7 @@ import { t } from "@repo/i18n";
 import { MSG } from "../utils/messages";
 import { badRequest, conflict, forbidden, notFound, ok, created } from "../utils/response";
 import { publishNotification } from "../utils/notify";
+import { recordHistory } from "../services/history.service";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 요청 바디 / 파라미터 타입
@@ -60,12 +61,14 @@ export interface CreateWorkspaceStatusBody {
     name: string;
     color?: string;
     order?: number;
+    notifyOnChange?: boolean;
 }
 
 export interface UpdateWorkspaceStatusBody {
     name?: string;
     color?: string;
     order?: number;
+    notifyOnChange?: boolean;
 }
 
 export interface WorkspacePriorityParams extends WorkspaceParams {
@@ -343,7 +346,7 @@ export function createWorkspaceController(app: FastifyInstance) {
     ) {
         const { workspaceId } = request.params;
         const lang = request.lang;
-        const { name, color = "gray", order } = request.body ?? {};
+        const { name, color = "gray", order, notifyOnChange = false } = request.body ?? {};
 
         const trimmedName = name?.trim();
         if (!trimmedName) {
@@ -377,7 +380,18 @@ export function createWorkspaceController(app: FastifyInstance) {
                 name: trimmedName,
                 color,
                 order: resolvedOrder,
+                notifyOnChange,
             },
+        });
+
+        recordHistory(app, {
+            projectId: ws.projectId,
+            userId: request.userId,
+            action: "CREATED",
+            resourceType: "WORKSPACE_STATUS",
+            resourceId: status.id,
+            resourceName: trimmedName,
+            after: { name: trimmedName, color, notifyOnChange },
         });
 
         return reply.code(201).send(created(status, t(lang, MSG.WORKSPACE_STATUS_CREATED)));
@@ -422,10 +436,30 @@ export function createWorkspaceController(app: FastifyInstance) {
         }
         if (body.color !== undefined) data.color = body.color;
         if (body.order !== undefined) data.order = body.order;
+        if (body.notifyOnChange !== undefined) data.notifyOnChange = body.notifyOnChange;
 
         const updated = await (app.prisma as any).workspaceStatus.update({
             where: { id: statusId },
             data,
+        });
+
+        recordHistory(app, {
+            projectId: ws.projectId,
+            userId: request.userId,
+            action: "UPDATED",
+            resourceType: "WORKSPACE_STATUS",
+            resourceId: statusId,
+            resourceName: updated.name,
+            before: {
+                name: existing.name,
+                color: existing.color,
+                notifyOnChange: existing.notifyOnChange,
+            },
+            after: {
+                name: updated.name,
+                color: updated.color,
+                notifyOnChange: updated.notifyOnChange,
+            },
         });
 
         return reply.send(ok(updated, t(lang, MSG.WORKSPACE_STATUS_UPDATED)));
@@ -469,6 +503,16 @@ export function createWorkspaceController(app: FastifyInstance) {
                 where: { id: statusId },
             }),
         ]);
+
+        recordHistory(app, {
+            projectId: ws.projectId,
+            userId: request.userId,
+            action: "DELETED",
+            resourceType: "WORKSPACE_STATUS",
+            resourceId: statusId,
+            resourceName: existing.name,
+            before: { name: existing.name, color: existing.color },
+        });
 
         return reply.send(ok({ id: statusId }, t(lang, MSG.WORKSPACE_STATUS_DELETED)));
     }
@@ -733,6 +777,16 @@ export function createWorkspaceController(app: FastifyInstance) {
             },
         });
 
+        recordHistory(app, {
+            projectId: ws.projectId,
+            userId: request.userId,
+            action: "CREATED",
+            resourceType: "TASK",
+            resourceId: task.id,
+            resourceName: task.title,
+            after: { title: task.title, statusId: task.statusId },
+        });
+
         const taskWithStatus = await withStatus(app, task);
         return reply.code(201).send(created(taskWithStatus, t(lang, MSG.WORKSPACE_TASK_CREATED)));
     }
@@ -816,11 +870,65 @@ export function createWorkspaceController(app: FastifyInstance) {
             },
         });
 
-        // 담당자가 변경됐고, 나 자신이 아닌 다른 사람에게 할당한 경우 알림 발행
+        // ── 히스토리 기록 ────────────────────────────────────────────────────
+        if (body.title !== undefined && body.title !== existing.title) {
+            recordHistory(app, {
+                projectId: ws.projectId, userId: request.userId,
+                action: "UPDATED", resourceType: "TASK",
+                resourceId: taskId, resourceName: updated.title,
+                before: { title: existing.title }, after: { title: updated.title },
+            });
+        }
+        if (body.statusId !== undefined && body.statusId !== existing.statusId) {
+            recordHistory(app, {
+                projectId: ws.projectId, userId: request.userId,
+                action: "UPDATED", resourceType: "TASK_STATUS",
+                resourceId: taskId, resourceName: updated.title,
+                before: { statusId: existing.statusId }, after: { statusId: updated.statusId },
+            });
+        }
+        if (body.priorityId !== undefined && body.priorityId !== existing.priorityId) {
+            recordHistory(app, {
+                projectId: ws.projectId, userId: request.userId,
+                action: "UPDATED", resourceType: "TASK_PRIORITY",
+                resourceId: taskId, resourceName: updated.title,
+                before: { priorityId: existing.priorityId ?? null },
+                after: { priorityId: updated.priorityId ?? null },
+            });
+        }
+        if (Object.prototype.hasOwnProperty.call(body, "assigneeId") && body.assigneeId !== existing.assigneeId) {
+            recordHistory(app, {
+                projectId: ws.projectId, userId: request.userId,
+                action: "UPDATED", resourceType: "TASK_ASSIGNEE",
+                resourceId: taskId, resourceName: updated.title,
+                before: { assigneeId: existing.assigneeId ?? null },
+                after: { assigneeId: updated.assigneeId ?? null },
+            });
+        }
         if (
-            body.assigneeId &&
-            body.assigneeId !== request.userId
+            (Object.prototype.hasOwnProperty.call(body, "startDate") || Object.prototype.hasOwnProperty.call(body, "dueDate")) &&
+            (body.startDate !== existing.startDate?.toISOString() || body.dueDate !== existing.dueDate?.toISOString())
         ) {
+            recordHistory(app, {
+                projectId: ws.projectId, userId: request.userId,
+                action: "UPDATED", resourceType: "TASK_DATE",
+                resourceId: taskId, resourceName: updated.title,
+                before: { startDate: existing.startDate ?? null, dueDate: existing.dueDate ?? null },
+                after: { startDate: updated.startDate ?? null, dueDate: updated.dueDate ?? null },
+            });
+        }
+        if (Object.prototype.hasOwnProperty.call(body, "description") && body.description !== existing.description) {
+            recordHistory(app, {
+                projectId: ws.projectId, userId: request.userId,
+                action: "UPDATED", resourceType: "TASK_DESCRIPTION",
+                resourceId: taskId, resourceName: updated.title,
+                before: { description: existing.description ?? null },
+                after: { description: updated.description ?? null },
+            });
+        }
+
+        // ── 담당자 변경 알림 ─────────────────────────────────────────────────
+        if (body.assigneeId && body.assigneeId !== request.userId) {
             const assigner = await app.prisma.user.findUnique({
                 where: { id: request.userId },
                 select: { name: true, email: true },
@@ -836,6 +944,40 @@ export function createWorkspaceController(app: FastifyInstance) {
             }).catch((err) =>
                 app.log.error({ err }, "Failed to publish task assignment notification"),
             );
+        }
+
+        // ── 상태 변경 시 notifyOnChange 팀원 알림 ───────────────────────────
+        if (body.statusId && body.statusId !== existing.statusId) {
+            const newStatus = await (app.prisma as any).workspaceStatus.findUnique({
+                where: { id: body.statusId },
+                select: { id: true, name: true, notifyOnChange: true },
+            });
+
+            if (newStatus?.notifyOnChange) {
+                // 같은 프로젝트의 모든 워크스페이스 멤버 조회
+                const projectMembers = await app.prisma.workspace.findMany({
+                    where: { projectId: ws.projectId, userId: { not: request.userId } },
+                    select: { userId: true },
+                });
+
+                const changer = await app.prisma.user.findUnique({
+                    where: { id: request.userId },
+                    select: { name: true, email: true },
+                });
+                const changerName = changer?.name ?? changer?.email ?? "누군가";
+
+                for (const member of projectMembers) {
+                    void publishNotification(app.redis, {
+                        userId: member.userId,
+                        type: "TASK_STATUS_CHANGED",
+                        title: `업무 상태가 '${newStatus.name}'(으)로 변경되었습니다`,
+                        message: `${changerName}님이 '${updated.title}' 상태를 '${newStatus.name}'(으)로 변경했습니다.`,
+                        data: { taskId: updated.id, workspaceId, statusId: newStatus.id },
+                    }).catch((err) =>
+                        app.log.error({ err }, "Failed to publish status change notification"),
+                    );
+                }
+            }
         }
 
         const taskWithStatus = await withStatus(app, updated);
@@ -861,6 +1003,17 @@ export function createWorkspaceController(app: FastifyInstance) {
         }
 
         await (app.prisma as any).workspaceTask.delete({ where: { id: taskId } });
+
+        recordHistory(app, {
+            projectId: ws.projectId,
+            userId: request.userId,
+            action: "DELETED",
+            resourceType: "TASK",
+            resourceId: taskId,
+            resourceName: existing.title,
+            before: { title: existing.title, statusId: existing.statusId },
+        });
+
         return reply.send(ok({ id: taskId }, t(lang, MSG.WORKSPACE_TASK_DELETED)));
     }
 
@@ -911,9 +1064,22 @@ export function createWorkspaceController(app: FastifyInstance) {
             select: {
                 id: true, content: true, createdAt: true, updatedAt: true,
                 user: { select: { id: true, name: true, email: true, avatarUrl: true } },
+                task: { select: { title: true } },
             },
         });
-        return reply.code(201).send(created(comment, "댓글이 등록되었습니다."));
+
+        recordHistory(app, {
+            projectId: ws.projectId,
+            userId: request.userId,
+            action: "CREATED",
+            resourceType: "TASK_COMMENT",
+            resourceId: comment.id,
+            resourceName: comment.task?.title ?? taskId,
+            after: { content },
+        });
+
+        const { task: _t, ...commentWithoutTask } = comment;
+        return reply.code(201).send(created(commentWithoutTask, "댓글이 등록되었습니다."));
     }
 
     /** DELETE /api/workspaces/:workspaceId/tasks/:taskId/comments/:commentId */
@@ -938,6 +1104,17 @@ export function createWorkspaceController(app: FastifyInstance) {
         }
 
         await (app.prisma as any).workspaceTaskComment.delete({ where: { id: commentId } });
+
+        recordHistory(app, {
+            projectId: ws.projectId,
+            userId: request.userId,
+            action: "DELETED",
+            resourceType: "TASK_COMMENT",
+            resourceId: commentId,
+            resourceName: taskId,
+            before: { content: comment.content },
+        });
+
         return reply.send(ok({ id: commentId }, "댓글이 삭제되었습니다."));
     }
 
@@ -1005,6 +1182,16 @@ export function createWorkspaceController(app: FastifyInstance) {
                 user: { select: { id: true, name: true, email: true, avatarUrl: true } },
             },
         });
+        recordHistory(app, {
+            projectId: ws.projectId,
+            userId: request.userId,
+            action: "CREATED",
+            resourceType: "TASK_ATTACHMENT",
+            resourceId: attachment.id,
+            resourceName: file.filename,
+            after: { fileName: file.filename, fileSize: buf.byteLength, mimeType: file.mimetype },
+        });
+
         return reply.code(201).send(created(attachment, "파일이 업로드되었습니다."));
     }
 
@@ -1032,6 +1219,17 @@ export function createWorkspaceController(app: FastifyInstance) {
         const { storageService } = await import("../index.js");
         await storageService.remove(attachment.fileUrl);
         await (app.prisma as any).workspaceTaskAttachment.delete({ where: { id: attachmentId } });
+
+        recordHistory(app, {
+            projectId: ws.projectId,
+            userId: request.userId,
+            action: "DELETED",
+            resourceType: "TASK_ATTACHMENT",
+            resourceId: attachmentId,
+            resourceName: attachment.fileName,
+            before: { fileName: attachment.fileName, fileSize: attachment.fileSize },
+        });
+
         return reply.send(ok({ id: attachmentId }, "파일이 삭제되었습니다."));
     }
 

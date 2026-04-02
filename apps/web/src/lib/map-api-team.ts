@@ -35,6 +35,21 @@ export type ApiTeamBannerData = {
     bannerUrl: string | null;
 };
 
+/** GET /api/teams/favorites 한 행 */
+export type ApiTeamFavoriteItem = {
+    id: string;
+    order: number;
+    createdAt: string;
+    team: {
+        id: string;
+        name: string;
+        shortDescription: string | null;
+        bannerThumbUrl: string | null;
+        hiddenFromUsers: boolean;
+        _count: { members: number };
+    };
+};
+
 /** GET /api/teams/:id 응답 `data` — 팀 상세 API와 동일한 JSON 형태 */
 
 export type ApiTeamMemberRow = {

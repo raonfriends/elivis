@@ -11,6 +11,7 @@ import type { ApiIdPayload } from "@/lib/map-api-project";
 import type {
     ApiTeamBannerData,
     ApiTeamDetail,
+    ApiTeamFavoriteItem,
     ApiTeamFieldsUpdated,
     ApiTeamListItem,
     ApiTeamsListData,
@@ -536,5 +537,80 @@ export async function fetchMorePublicTeamsAction(input: {
         return { ok: true, publicTeams };
     } catch {
         return { ok: false, message: "네트워크 오류가 발생했습니다." };
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 팀 즐겨찾기
+// ─────────────────────────────────────────────────────────────────────────────
+
+export async function fetchTeamFavoritesAction(): Promise<{
+    ok: true;
+    favorites: ApiTeamFavoriteItem[];
+} | { ok: false; message: string }> {
+    try {
+        const res = await fetch(apiUrl("/api/teams/favorites"), {
+            headers: await apiFetchHeaders(),
+            cache: "no-store",
+        });
+        const body = (await res.json()) as ApiEnvelope<ApiTeamFavoriteItem[]>;
+        if (!res.ok) return { ok: false, message: body.message ?? "즐겨찾기를 불러오지 못했습니다." };
+        return { ok: true, favorites: body.data ?? [] };
+    } catch {
+        return { ok: false, message: "네트워크 오류가 발생했습니다." };
+    }
+}
+
+export async function addTeamFavoriteAction(teamId: string): Promise<{
+    ok: boolean;
+    message?: string;
+    favorite?: ApiTeamFavoriteItem;
+}> {
+    try {
+        const res = await fetch(apiUrl(`/api/teams/${encodeURIComponent(teamId)}/favorite`), {
+            method: "POST",
+            headers: await apiFetchHeaders(),
+            body: JSON.stringify({}),
+        });
+        const body = (await res.json()) as ApiEnvelope<ApiTeamFavoriteItem>;
+        if (!res.ok) return { ok: false, message: body.message };
+        revalidatePath("/teams");
+        revalidatePath(`/teams/${teamId}`);
+        return { ok: true, favorite: body.data };
+    } catch {
+        return { ok: false, message: "네트워크 오류가 발생했습니다." };
+    }
+}
+
+export async function removeTeamFavoriteAction(teamId: string): Promise<{
+    ok: boolean;
+    message?: string;
+}> {
+    try {
+        const res = await fetch(apiUrl(`/api/teams/${encodeURIComponent(teamId)}/favorite`), {
+            method: "DELETE",
+            headers: await apiFetchHeaders(),
+            body: JSON.stringify({}),
+        });
+        const body = (await res.json()) as ApiEnvelope<null>;
+        if (!res.ok) return { ok: false, message: body.message };
+        revalidatePath("/teams");
+        revalidatePath(`/teams/${teamId}`);
+        return { ok: true };
+    } catch {
+        return { ok: false, message: "네트워크 오류가 발생했습니다." };
+    }
+}
+
+export async function checkTeamFavoriteAction(teamId: string): Promise<boolean> {
+    try {
+        const res = await fetch(
+            apiUrl(`/api/teams/${encodeURIComponent(teamId)}/favorite/status`),
+            { headers: await apiFetchHeaders(), cache: "no-store" },
+        );
+        const body = (await res.json()) as ApiEnvelope<{ isFavorite: boolean }>;
+        return body.data?.isFavorite ?? false;
+    } catch {
+        return false;
     }
 }

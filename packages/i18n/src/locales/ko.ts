@@ -233,6 +233,7 @@ export const ko = {
           intro: "소개",
           projects: "프로젝트",
           members: "팀원",
+          community: "커뮤니티",
           settings: "설정",
         },
         roles: {
@@ -325,10 +326,19 @@ export const ko = {
           adding: "추가 중…",
           add: "추가",
         },
+        community: {
+          title: "커뮤니티",
+          desc: "팀원들과 소식·공지·의견을 나눠보세요.",
+          emptyTitle: "아직 작성된 게시글이 없습니다.",
+          emptyDesc: "첫 번째 글을 작성해 팀원들과 소통해 보세요.",
+          writePost: "글 작성하기",
+          comingSoon: "커뮤니티 기능이 곧 제공될 예정입니다.",
+        },
         settings: {
           subTabs: {
             team: "팀 설정",
             security: "보안",
+            activityLog: "활동 로그",
           },
           team: {
             name: {

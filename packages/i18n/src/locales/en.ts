@@ -224,6 +224,7 @@ export const en = {
           intro: "Intro",
           projects: "Projects",
           members: "Members",
+          community: "Community",
           settings: "Settings",
         },
         roles: {
@@ -316,10 +317,19 @@ export const en = {
           adding: "Adding…",
           add: "Add",
         },
+        community: {
+          title: "Community",
+          desc: "Share news, announcements, and ideas with your team.",
+          emptyTitle: "No posts yet.",
+          emptyDesc: "Be the first to post and start a conversation.",
+          writePost: "Write a post",
+          comingSoon: "Community feature coming soon.",
+        },
         settings: {
           subTabs: {
             team: "Team",
             security: "Security",
+            activityLog: "Activity Log",
           },
           team: {
             name: {

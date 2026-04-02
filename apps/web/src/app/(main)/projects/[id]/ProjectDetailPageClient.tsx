@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 
 import { MarkdownContent } from "@/components/MarkdownContent";
 import { UserAvatar } from "@/components/UserAvatar";
+import { ProjectFavoriteButton } from "@/components/ProjectFavoriteButton";
 import { getProject, type Project, type ProjectUser, type ProjectViewerRole } from "@/lib/projects";
 
 import {
@@ -252,9 +253,11 @@ function AvatarStack({
 export function ProjectDetailPageClient({
     initialProject,
     loadMode,
+    isFavorite = false,
 }: {
     initialProject: Project | null;
     loadMode: ProjectDetailLoadMode;
+    isFavorite?: boolean;
 }) {
     const params = useParams();
     const router = useRouter();
@@ -328,9 +331,18 @@ export function ProjectDetailPageClient({
                         </svg>
                     </button>
                     <div className="min-w-0 flex-1">
-                        <h1 className="truncate text-lg font-semibold text-stone-800 sm:text-xl">
-                            {project?.name ?? "로딩 중…"}
-                        </h1>
+                        <div className="flex min-w-0 items-center gap-2">
+                            <h1 className="truncate text-lg font-semibold text-stone-800 sm:text-xl">
+                                {project?.name ?? "로딩 중…"}
+                            </h1>
+                            {project && (
+                                <ProjectFavoriteButton
+                                    projectId={project.id}
+                                    initialIsFavorite={isFavorite}
+                                    size="sm"
+                                />
+                            )}
+                        </div>
                         <p className="truncate text-xs text-stone-500 sm:text-sm">
                             {project?.description || "프로젝트 상세"}
                         </p>

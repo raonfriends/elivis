@@ -1,5 +1,5 @@
 import { fetchTeamsList } from "@/lib/teams.server";
-
+import { fetchTeamFavoritesAction } from "@/app/actions/teams";
 import { TeamsPageClient } from "./TeamsPageClient";
 
 export default async function TeamsPage({
@@ -10,9 +10,10 @@ export default async function TeamsPage({
     const { q } = await searchParams;
     const searchQuery = (q ?? "").trim();
 
-    const [myRes, pubRes] = await Promise.all([
+    const [myRes, pubRes, favRes] = await Promise.all([
         fetchTeamsList({ kind: "my", take: 100, skip: 0, q: searchQuery || undefined }),
         fetchTeamsList({ kind: "public", take: 20, skip: 0, q: searchQuery || undefined }),
+        fetchTeamFavoritesAction(),
     ]);
 
     if (!myRes || !pubRes) {
@@ -23,11 +24,16 @@ export default async function TeamsPage({
         );
     }
 
+    const favoriteTeamIds = new Set(
+        favRes.ok ? favRes.favorites.map((f) => f.team.id) : [],
+    );
+
     return (
         <TeamsPageClient
             myTeams={myRes.myTeams}
             publicTeams={pubRes.publicTeams}
             searchQuery={searchQuery}
+            favoriteTeamIds={favoriteTeamIds}
         />
     );
 }

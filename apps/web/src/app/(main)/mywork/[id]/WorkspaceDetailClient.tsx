@@ -43,6 +43,8 @@ import {
     deleteWorkspacePriorityAction,
     reorderWorkspaceTasksAction,
 } from "@/app/actions/workspaces";
+import { StatusModal } from "./StatusModal";
+import type { StatusModalValue } from "./StatusModal";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 탭 정의
@@ -54,17 +56,8 @@ type WorkspaceTab = "mywork" | "summary" | "requests" | "calendar";
 // 색상 팔레트
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const TAG_COLORS: Record<string, { badge: string; dot: string }> = {
-    gray:   { badge: "bg-stone-100 text-stone-600",   dot: "bg-stone-400" },
-    red:    { badge: "bg-red-100 text-red-700",        dot: "bg-red-500" },
-    orange: { badge: "bg-orange-100 text-orange-700",  dot: "bg-orange-500" },
-    yellow: { badge: "bg-yellow-100 text-yellow-700",  dot: "bg-yellow-500" },
-    green:  { badge: "bg-green-100 text-green-700",    dot: "bg-green-500" },
-    blue:   { badge: "bg-blue-100 text-blue-700",      dot: "bg-blue-500" },
-    purple: { badge: "bg-purple-100 text-purple-700",  dot: "bg-purple-500" },
-    pink:   { badge: "bg-pink-100 text-pink-700",      dot: "bg-pink-500" },
-};
-const COLOR_KEYS = Object.keys(TAG_COLORS);
+export { TAG_COLORS } from "./statusColors";
+import { TAG_COLORS, COLOR_KEYS } from "./statusColors";
 
 type TagColorResult = { badge: string; dot: string; badgeStyle?: React.CSSProperties; dotStyle?: React.CSSProperties };
 
@@ -85,7 +78,7 @@ function tagColorOf(color: string): TagColorResult {
 // 재사용 태그 드롭다운 (상태 / 우선순위 공용)
 // ─────────────────────────────────────────────────────────────────────────────
 
-type TagItem = { id: string; name: string; color: string; order: number; value?: number };
+type TagItem = { id: string; name: string; color: string; order: number; value?: number; notifyOnChange?: boolean };
 
 function TagDropdown({
     selectedId,
@@ -99,6 +92,8 @@ function TagDropdown({
     onDelete,
     onChange,
     onItemsChange,
+    onOpenCreate,
+    onOpenEdit,
 }: {
     selectedId: string | null;
     items: TagItem[];
@@ -111,6 +106,10 @@ function TagDropdown({
     onDelete: (workspaceId: string, id: string) => Promise<{ ok: true } | { ok: false; message: string }>;
     onChange: (newId: string | null) => void;
     onItemsChange: (items: TagItem[]) => void;
+    /** 제공 시 인라인 추가 폼 대신 이 콜백 실행 (모달 등) */
+    onOpenCreate?: () => void;
+    /** 제공 시 인라인 편집 폼 대신 이 콜백 실행 (모달 등) */
+    onOpenEdit?: (item: TagItem) => void;
 }) {
     const t = useTranslations("workspace");
     const [open, setOpen] = useState(false);
@@ -159,7 +158,10 @@ function TagDropdown({
         setOpen((v) => !v);
     }
 
-    function startEdit(s: TagItem) { setEditingId(s.id); setEditName(s.name); setEditColor(s.color); }
+    function startEdit(s: TagItem) {
+        if (onOpenEdit) { onOpenEdit(s); return; }
+        setEditingId(s.id); setEditName(s.name); setEditColor(s.color);
+    }
 
     function submitEdit(s: TagItem) {
         if (!editName.trim() || (editName.trim() === s.name && editColor === s.color)) { setEditingId(null); return; }
@@ -281,7 +283,7 @@ function TagDropdown({
                             </div>
                         </div>
                     ) : (
-                        <button type="button" onClick={() => setAdding(true)}
+                        <button type="button" onClick={() => { if (onOpenCreate) { onOpenCreate(); setOpen(false); } else setAdding(true); }}
                             className="flex w-full items-center gap-2 px-3 py-1.5 text-xs text-stone-500 hover:bg-stone-50">
                             <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -786,6 +788,12 @@ const TaskRow = ({
         });
     }
 
+    // ── 상태 모달 ─────────────────────────────────────────────────────────────
+    const [statusModal, setStatusModal] = useState<{
+        mode: "create" | "edit";
+        item?: TagItem;
+    } | null>(null);
+
     // 상태 CRUD 어댑터
     const statusCreateAdapter = useCallback(async (wsId: string, input: { name: string; color: string }) => {
         const res = await createWorkspaceStatusAction(wsId, input);
@@ -801,8 +809,36 @@ const TaskRow = ({
         return deleteWorkspaceStatusAction(wsId, id);
     }, []);
 
+    // 상태 모달 저장 핸들러
+    async function handleStatusModalSave(value: StatusModalValue) {
+        if (statusModal?.mode === "create") {
+            const res = await createWorkspaceStatusAction(workspaceId, value);
+            if (res.ok) {
+                onStatusesChange([...statuses, res.status] as unknown as ApiWorkspaceStatus[]);
+            }
+        } else if (statusModal?.mode === "edit" && statusModal.item) {
+            const res = await updateWorkspaceStatusAction(workspaceId, statusModal.item.id, value);
+            if (res.ok) {
+                onStatusesChange(
+                    statuses.map((s) =>
+                        s.id === statusModal.item!.id ? (res.status as unknown as ApiWorkspaceStatus) : s,
+                    ),
+                );
+            }
+        }
+        setStatusModal(null);
+    }
+
     return (
         <>
+            {statusModal && (
+                <StatusModal
+                    mode={statusModal.mode}
+                    initialValue={statusModal.item}
+                    onSave={handleStatusModalSave}
+                    onClose={() => setStatusModal(null)}
+                />
+            )}
             <tr
                 className={`group border-b transition-opacity ${isPending ? "opacity-50" : ""} ${isDragging ? "opacity-30" : ""} ${
                     isTop
@@ -859,6 +895,8 @@ const TaskRow = ({
                         onCreate={statusCreateAdapter}
                         onUpdate={statusUpdateAdapter}
                         onDelete={statusDeleteAdapter}
+                        onOpenCreate={() => setStatusModal({ mode: "create" })}
+                        onOpenEdit={(item) => setStatusModal({ mode: "edit", item })}
                     />
                     </div>
                 </td>
@@ -992,6 +1030,12 @@ function DraggableTaskCard({
 
     const style: React.CSSProperties = { transform: CSS.Transform.toString(transform), opacity: isDragging ? 0.3 : 1 };
 
+    // ── 상태 모달 ─────────────────────────────────────────────────────────────
+    const [statusModal, setStatusModal] = useState<{
+        mode: "create" | "edit";
+        item?: TagItem;
+    } | null>(null);
+
     // 상태 어댑터
     const statusCreateAdapter = useCallback(async (wsId: string, input: { name: string; color: string }) => {
         const res = await createWorkspaceStatusAction(wsId, input);
@@ -1004,7 +1048,33 @@ function DraggableTaskCard({
         return { ok: false as const, message: res.message };
     }, []);
 
+    async function handleStatusModalSave(value: StatusModalValue) {
+        if (statusModal?.mode === "create") {
+            const res = await createWorkspaceStatusAction(workspaceId, value);
+            if (res.ok) onStatusesChange([...statuses, res.status] as unknown as ApiWorkspaceStatus[]);
+        } else if (statusModal?.mode === "edit" && statusModal.item) {
+            const res = await updateWorkspaceStatusAction(workspaceId, statusModal.item.id, value);
+            if (res.ok) {
+                onStatusesChange(
+                    statuses.map((s) =>
+                        s.id === statusModal.item!.id ? (res.status as unknown as ApiWorkspaceStatus) : s,
+                    ),
+                );
+            }
+        }
+        setStatusModal(null);
+    }
+
     return (
+        <>
+        {statusModal && (
+            <StatusModal
+                mode={statusModal.mode}
+                initialValue={statusModal.item}
+                onSave={handleStatusModalSave}
+                onClose={() => setStatusModal(null)}
+            />
+        )}
         <div ref={setNodeRef} style={style}
             className={`rounded-lg border border-stone-200 bg-white p-3 shadow-sm transition-opacity ${isPending ? "opacity-50" : ""}`}>
             {/* 드래그 핸들 + 삭제 */}
@@ -1028,7 +1098,9 @@ function DraggableTaskCard({
                     onChange={(id) => { if (id) { startTransition(async () => { const res = await updateWorkspaceTaskAction(workspaceId, task.id, { statusId: id }); if (res.ok) onUpdate(res.task); }); } }}
                     onItemsChange={(items) => onStatusesChange(items as unknown as ApiWorkspaceStatus[])}
                     onCreate={statusCreateAdapter} onUpdate={statusUpdateAdapter}
-                    onDelete={async (wsId, id) => deleteWorkspaceStatusAction(wsId, id)} />
+                    onDelete={async (wsId, id) => deleteWorkspaceStatusAction(wsId, id)}
+                    onOpenCreate={() => setStatusModal({ mode: "create" })}
+                    onOpenEdit={(item) => setStatusModal({ mode: "edit", item })} />
                 <PriorityDropdown
                     selectedId={task.priorityId}
                     items={priorities as unknown as TagItem[]}
@@ -1046,6 +1118,7 @@ function DraggableTaskCard({
                 </div>
             )}
         </div>
+        </>
     );
 }
 

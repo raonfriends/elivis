@@ -49,10 +49,32 @@ enum NotificationType {
   TASK_ASSIGNED        /// 업무 할당됨
   TASK_COMMENT         /// 업무에 댓글 달림
   TASK_DUE_SOON        /// 업무 마감 임박
+  TASK_STATUS_CHANGED  /// 업무 상태 변경됨 (notifyOnChange)
   PROJECT_MEMBER_ADDED /// 프로젝트에 멤버 추가됨
   TEAM_MEMBER_ADDED    /// 팀에 멤버 추가됨
   MENTION              /// 언급됨
   SYSTEM               /// 시스템 알림
+}
+
+/// 프로젝트 히스토리 행동 종류
+enum ProjectHistoryAction {
+  CREATED /// 생성됨
+  UPDATED /// 수정됨
+  DELETED /// 삭제됨
+}
+
+/// 프로젝트 히스토리 리소스 종류
+enum ProjectHistoryResourceType {
+  TASK             /// 워크스페이스 업무
+  TASK_STATUS      /// 업무 상태 변경
+  TASK_PRIORITY    /// 업무 우선순위 변경
+  TASK_ASSIGNEE    /// 업무 담당자 변경
+  TASK_DATE        /// 업무 날짜 변경
+  TASK_DESCRIPTION /// 업무 설명 변경
+  TASK_COMMENT     /// 업무 댓글
+  TASK_ATTACHMENT  /// 업무 첨부파일
+  WORKSPACE_STATUS   /// 워크스페이스 상태 태그
+  WORKSPACE_PRIORITY /// 워크스페이스 우선순위 태그
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -77,11 +99,14 @@ model User {
 
   teamsCreated    Team[]       @relation("TeamCreator")
   teamMemberships TeamMember[]
+  teamFavorites    TeamFavorite[]
+  projectFavorites ProjectFavorite[]
   workspaces          Workspace[]
   workspaceTasks      WorkspaceTask[]
   taskComments        WorkspaceTaskComment[]
   taskAttachments     WorkspaceTaskAttachment[]
   notifications       Notification[]
+  projectHistories    ProjectHistory[]
 }
 
 model Project {
@@ -107,8 +132,26 @@ model Project {
   /// 공용 팀프로젝트 등 — 여러 팀에 동시에 연결
   projectTeams ProjectTeam[]
   workspaces   Workspace[]
+  histories    ProjectHistory[]
+  favorites    ProjectFavorite[]
 
   @@index([teamId])
+}
+
+/// 프로젝트 즐겨찾기 (계정별 최대 10개)
+model ProjectFavorite {
+  id        String   @id
+  userId    String
+  projectId String
+  /// 사이드바 표시 순서 (작을수록 상단)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, projectId])
+  @@index([userId, order])
 }
 
 /// 프로젝트 ↔ 팀 다대다 (한 프로젝트가 여러 팀에 노출)
@@ -165,12 +208,29 @@ model Team {
 
   createdBy User         @relation("TeamCreator", fields: [createdById], references: [id], onDelete: Restrict)
   members   TeamMember[]
+  favorites TeamFavorite[]
   projects  Project[]
   projectTeams ProjectTeam[]
 
   @@unique([name])
   @@index([createdAt(sort: Desc)])
   @@index([createdById])
+}
+
+/// 팀 즐겨찾기 (계정별 최대 10개)
+model TeamFavorite {
+  id        String   @id
+  userId    String
+  teamId    String
+  /// 사이드바 표시 순서 (작을수록 상단)
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@index([userId, order])
 }
 
 model TeamMember {
@@ -331,6 +391,8 @@ model WorkspaceStatus {
   color       String   @default("gray")
   /// 목록 표시 순서 (작을수록 상단)
   order       Int      @default(0)
+  /// true면 업무가 이 상태로 변경될 때 프로젝트 팀원 전체에게 알림 발송
+  notifyOnChange Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -358,6 +420,37 @@ model WorkspaceView {
   /// 워크스페이스당 뷰 타입은 1개
   @@unique([workspaceId, type])
   @@index([workspaceId])
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// 프로젝트 변경 히스토리
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// 프로젝트 내 모든 변경 사항을 기록하는 감사 로그
+model ProjectHistory {
+  /// 앱에서 `generatePublicId()`로 발급 (12자 영숫자)
+  id           String                     @id
+  projectId    String
+  /// 변경을 수행한 사용자
+  userId       String
+  action       ProjectHistoryAction
+  resourceType ProjectHistoryResourceType
+  /// 변경된 리소스 ID (taskId, statusId 등)
+  resourceId   String?
+  /// 변경된 리소스 이름 (삭제 후에도 표시용)
+  resourceName String?
+  /// 변경 전 값 (JSON)
+  before       String?
+  /// 변경 후 값 (JSON)
+  after        String?
+  createdAt    DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([projectId, createdAt(sort: Desc)])
+  @@index([userId])
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -19,6 +19,8 @@ export type ApiWorkspaceStatus = {
     /** 색상 키: gray | red | orange | yellow | green | blue | purple | pink */
     color: string;
     order: number;
+    /** true면 이 상태로 변경 시 프로젝트 팀원 전체에게 알림 발송 */
+    notifyOnChange: boolean;
     createdAt: string;
     updatedAt: string;
 };

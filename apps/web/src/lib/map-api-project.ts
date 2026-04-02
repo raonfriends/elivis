@@ -20,6 +20,21 @@ export type ApiProjectListItem = {
     viewerIsTeamMember?: boolean;
 };
 
+/** GET /api/projects/favorites 한 행 */
+export type ApiProjectFavoriteItem = {
+    id: string;
+    order: number;
+    createdAt: string;
+    project: {
+        id: string;
+        name: string;
+        description: string | null;
+        isPublic: boolean;
+        _count: { members: number; tasks: number };
+        team: { id: string; name: string } | null;
+    };
+};
+
 /** GET /api/projects 응답 `data` */
 export type ApiProjectListData = {
     items: ApiProjectListItem[];

@@ -9,6 +9,7 @@ import { getApiBaseUrl } from "@/lib/api";
 import type { TeamListItem } from "@/lib/teams.server";
 import { fetchMorePublicTeamsAction } from "@/app/actions/teams";
 import { updateMyTeamPinsAction } from "@/app/actions/teams";
+import { TeamFavoriteButton } from "@/components/TeamFavoriteButton";
 
 import {
     DndContext,
@@ -42,49 +43,57 @@ function truncate(str: string, maxLen: number): string {
     return str.slice(0, maxLen) + "…";
 }
 
-function TeamListCard({ team, compact }: { team: TeamListItem; compact?: boolean }) {
+function TeamListCard({
+    team,
+    compact,
+    isFavorite = false,
+}: {
+    team: TeamListItem;
+    compact?: boolean;
+    isFavorite?: boolean;
+}) {
     const bannerThumb = listBannerSrc(team.bannerUrl);
     const leaderLabel = team.createdBy?.name?.trim() || team.createdBy?.email || null;
     return (
-        <li>
-            <Link
-                href={`/teams/${team.id}`}
-                className={`group flex cursor-pointer items-start gap-3 rounded-lg border border-stone-200/90 bg-white transition-all hover:border-stone-300 hover:shadow-sm sm:gap-4 ${
-                    compact ? "p-3 sm:p-3.5" : "p-4 hover:shadow-md sm:p-5"
-                }`}
-            >
-                {bannerThumb ? (
-                    <span className="relative h-14 w-28 shrink-0 overflow-hidden rounded-lg bg-stone-100 sm:h-16 sm:w-32">
-                        <img
-                            src={bannerThumb}
-                            alt=""
-                            className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
-                        />
-                    </span>
-                ) : (
-                    <span className="relative h-14 w-28 shrink-0 overflow-hidden rounded-lg bg-stone-100 sm:h-16 sm:w-32">
-                        <span
-                            className="flex h-full w-full items-center justify-center bg-gradient-to-br from-stone-200 via-stone-100 to-stone-200 text-stone-500 transition-colors group-hover:text-stone-600"
-                            aria-hidden
-                        >
-                            <svg
-                                className="h-6 w-6 sm:h-7 sm:w-7"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.5}
-                                stroke="currentColor"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-                                />
-                            </svg>
+        <li className={`group rounded-lg border border-stone-200/90 bg-white transition-all hover:border-stone-300 hover:shadow-sm ${compact ? "" : "hover:shadow-md"}`}>
+            <div className={`flex items-start gap-3 sm:gap-4 ${compact ? "p-3 sm:p-3.5" : "p-4 sm:p-5"}`}>
+                {/* 배너 썸네일 — 클릭 시 팀 이동 */}
+                <Link href={`/teams/${team.id}`} tabIndex={-1} className="shrink-0">
+                    {bannerThumb ? (
+                        <span className="relative block h-14 w-28 overflow-hidden rounded-lg bg-stone-100 sm:h-16 sm:w-32">
+                            <img
+                                src={bannerThumb}
+                                alt=""
+                                className="h-full w-full object-cover transition-transform group-hover:scale-[1.02]"
+                            />
                         </span>
-                    </span>
-                )}
-                <div className="min-w-0 flex-1">
-                    <div className="flex min-w-0 items-center gap-2">
+                    ) : (
+                        <span className="relative block h-14 w-28 overflow-hidden rounded-lg bg-stone-100 sm:h-16 sm:w-32">
+                            <span
+                                className="flex h-full w-full items-center justify-center bg-gradient-to-br from-stone-200 via-stone-100 to-stone-200 text-stone-500 transition-colors group-hover:text-stone-600"
+                                aria-hidden
+                            >
+                                <svg
+                                    className="h-6 w-6 sm:h-7 sm:w-7"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    strokeWidth={1.5}
+                                    stroke="currentColor"
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.971 5.971 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94 3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                                    />
+                                </svg>
+                            </span>
+                        </span>
+                    )}
+                </Link>
+
+                {/* 텍스트 영역 */}
+                <Link href={`/teams/${team.id}`} className="min-w-0 flex-1 block">
+                    <div className="flex min-w-0 items-center gap-1.5">
                         <h3
                             className={`min-w-0 truncate font-semibold text-stone-800 transition-colors group-hover:text-stone-900 ${
                                 compact ? "text-sm sm:text-[15px]" : ""
@@ -92,6 +101,7 @@ function TeamListCard({ team, compact }: { team: TeamListItem; compact?: boolean
                         >
                             {team.name || "—"}
                         </h3>
+                        <TeamFavoriteButton teamId={team.id} initialIsFavorite={isFavorite} size="md" />
                         {team.hiddenFromUsers ? (
                             <span className="shrink-0 rounded-md border border-stone-200 bg-stone-50 px-2 py-0.5 text-[11px] font-medium text-stone-600">
                                 비공개
@@ -136,8 +146,10 @@ function TeamListCard({ team, compact }: { team: TeamListItem; compact?: boolean
                             </span>
                         </div>
                     </div>
-                </div>
-                <span className="shrink-0 text-stone-400">
+                </Link>
+
+                {/* 화살표 */}
+                <Link href={`/teams/${team.id}`} tabIndex={-1} className="shrink-0 self-center text-stone-300 transition-transform group-hover:translate-x-0.5">
                     <svg
                         className="h-5 w-5"
                         fill="none"
@@ -151,8 +163,8 @@ function TeamListCard({ team, compact }: { team: TeamListItem; compact?: boolean
                             d="M8.25 4.5l7.5 7.5-7.5 7.5"
                         />
                     </svg>
-                </span>
-            </Link>
+                </Link>
+            </div>
         </li>
     );
 }
@@ -213,16 +225,19 @@ export function TeamsPageClient({
     myTeams: myTeamsProp,
     publicTeams: publicTeamsProp,
     searchQuery,
+    favoriteTeamIds: favoriteTeamIdsProp,
 }: {
     myTeams: TeamListItem[] | undefined;
     publicTeams: TeamListItem[] | undefined;
     searchQuery: string;
+    favoriteTeamIds?: Set<string>;
 }) {
     const t = useTranslations("teams");
     const tCommon = useTranslations("common");
 
     const myTeams = myTeamsProp ?? [];
     const [publicTeams, setPublicTeams] = useState<TeamListItem[]>(publicTeamsProp ?? []);
+    const favoriteTeamIds = favoriteTeamIdsProp ?? new Set<string>();
     const [publicLoadingMore, setPublicLoadingMore] = useState(false);
     const [publicHasMore, setPublicHasMore] = useState(true);
     const publicSentinelRef = useRef<HTMLDivElement | null>(null);
@@ -491,7 +506,11 @@ export function TeamsPageClient({
                                 <>
                                     <ul className="mt-4 space-y-3">
                                         {pageList.map((team) => (
-                                            <TeamListCard key={team.id} team={team} />
+                                            <TeamListCard
+                                                key={team.id}
+                                                team={team}
+                                                isFavorite={favoriteTeamIds.has(team.id)}
+                                            />
                                         ))}
                                     </ul>
                                 </>
@@ -514,7 +533,12 @@ export function TeamsPageClient({
                                 </p>
                                 <ul className="mt-3 space-y-2">
                                     {publicTeams.map((team) => (
-                                        <TeamListCard key={team.id} team={team} compact />
+                                        <TeamListCard
+                                            key={team.id}
+                                            team={team}
+                                            compact
+                                            isFavorite={favoriteTeamIds.has(team.id)}
+                                        />
                                     ))}
                                 </ul>
                                 <div ref={publicSentinelRef} className="h-10" aria-hidden />

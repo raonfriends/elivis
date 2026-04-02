@@ -19,7 +19,7 @@ import type {
 
 export async function createWorkspaceStatusAction(
     workspaceId: string,
-    input: { name: string; color?: string },
+    input: { name: string; color?: string; notifyOnChange?: boolean },
 ): Promise<{ ok: true; status: ApiWorkspaceStatus } | { ok: false; message: string }> {
     const jar = await cookies();
     if (!jar.get(AT_COOKIE)?.value) return { ok: false, message: "로그인이 필요합니다." };
@@ -45,7 +45,7 @@ export async function createWorkspaceStatusAction(
 export async function updateWorkspaceStatusAction(
     workspaceId: string,
     statusId: string,
-    input: { name?: string; color?: string },
+    input: { name?: string; color?: string; notifyOnChange?: boolean },
 ): Promise<{ ok: true; status: ApiWorkspaceStatus } | { ok: false; message: string }> {
     const jar = await cookies();
     if (!jar.get(AT_COOKIE)?.value) return { ok: false, message: "로그인이 필요합니다." };

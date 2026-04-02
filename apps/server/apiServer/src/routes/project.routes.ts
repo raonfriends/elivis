@@ -2,6 +2,7 @@ import type { FastifyInstance } from "fastify";
 
 import { createProjectController } from "../controllers/project.controller";
 import { createProjectsController } from "../controllers/projects.controller";
+import { createProjectFavoriteController } from "../controllers/projectFavorite.controller";
 import type {
     AddMemberBody,
     CreateProjectBody,
@@ -51,5 +52,29 @@ export async function projectRoutes(app: FastifyInstance) {
         "/projects/:projectId/members",
         { preHandler: [authenticateUser, authenticateProjectManager] },
         addMember,
+    );
+
+    // ── 즐겨찾기 ────────────────────────────────────────────────────────────
+    const { listFavorites, addFavorite, removeFavorite, checkFavorite } =
+        createProjectFavoriteController(app);
+
+    app.get("/projects/favorites", { preHandler: [authenticateUser] }, listFavorites);
+
+    app.get<{ Params: { projectId: string } }>(
+        "/projects/:projectId/favorite/status",
+        { preHandler: [authenticateUser] },
+        checkFavorite,
+    );
+
+    app.post<{ Params: { projectId: string } }>(
+        "/projects/:projectId/favorite",
+        { preHandler: [authenticateUser] },
+        addFavorite,
+    );
+
+    app.delete<{ Params: { projectId: string } }>(
+        "/projects/:projectId/favorite",
+        { preHandler: [authenticateUser] },
+        removeFavorite,
     );
 }

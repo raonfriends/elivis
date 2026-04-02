@@ -6,6 +6,7 @@ export type NotificationEventType =
   | "TASK_ASSIGNED"
   | "TASK_COMMENT"
   | "TASK_DUE_SOON"
+  | "TASK_STATUS_CHANGED"
   | "PROJECT_MEMBER_ADDED"
   | "TEAM_MEMBER_ADDED"
   | "MENTION"

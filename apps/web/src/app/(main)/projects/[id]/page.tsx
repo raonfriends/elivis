@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 
 import { AT_COOKIE } from "@/lib/auth.server";
 import { fetchProjectById } from "@/lib/projects.server";
+import { checkProjectFavoriteAction } from "@/app/actions/projects";
 
 import { ProjectDetailPageClient } from "./ProjectDetailPageClient";
 
@@ -17,13 +18,16 @@ export default async function ProjectDetailPage({
     const jar = await cookies();
 
     if (!jar.get(AT_COOKIE)?.value) {
-        return <ProjectDetailPageClient initialProject={null} loadMode="client_only" />;
+        return <ProjectDetailPageClient initialProject={null} loadMode="client_only" isFavorite={false} />;
     }
 
-    const result = await fetchProjectById(id);
+    const [result, isFavorite] = await Promise.all([
+        fetchProjectById(id),
+        checkProjectFavoriteAction(id),
+    ]);
 
     if (result.ok) {
-        return <ProjectDetailPageClient initialProject={result.project} loadMode="server_ok" />;
+        return <ProjectDetailPageClient initialProject={result.project} loadMode="server_ok" isFavorite={isFavorite} />;
     }
 
     if (result.reason === "unauthorized") {
@@ -38,5 +42,5 @@ export default async function ProjectDetailPage({
         );
     }
 
-    return <ProjectDetailPageClient initialProject={null} loadMode="server_miss" />;
+    return <ProjectDetailPageClient initialProject={null} loadMode="server_miss" isFavorite={false} />;
 }

@@ -11,16 +11,17 @@ import { TeamIntroPageContent, type TeamIntroPageContentHandle } from "./TeamInt
 import { TeamIntroBannerBlock } from "./TeamIntroBannerBlock";
 import { delegateTeamLeaderAction, deleteTeamAction, removeTeamMemberAction, updateTeamFieldsAction } from "@/app/actions/teams";
 import { UserAvatar } from "@/components/UserAvatar";
+import { TeamFavoriteButton } from "@/components/TeamFavoriteButton";
 import type { TeamDetail, TeamMemberRow } from "@/lib/teams.server";
 
-type TeamTab = "intro" | "projects" | "members" | "settings";
+type TeamTab = "intro" | "projects" | "members" | "community" | "settings";
 
-const TABS: TeamTab[] = ["intro", "projects", "members", "settings"];
+const ALL_TABS: TeamTab[] = ["intro", "projects", "members", "community", "settings"];
 
-type TeamSettingsSubTab = "team" | "security";
+type TeamSettingsSubTab = "team" | "security" | "activityLog";
 
 /** 내 설정(SettingsClient)과 동일: 모바일 가로 스크롤 / lg 세로 사이드바 */
-const TEAM_SETTINGS_SUB_TABS: { id: TeamSettingsSubTab; icon: string }[] = [
+const ALL_SETTINGS_SUB_TABS: { id: TeamSettingsSubTab; icon: string }[] = [
     {
         id: "team",
         icon: "M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z",
@@ -29,10 +30,14 @@ const TEAM_SETTINGS_SUB_TABS: { id: TeamSettingsSubTab; icon: string }[] = [
         id: "security",
         icon: "M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z",
     },
+    {
+        id: "activityLog",
+        icon: "M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z",
+    },
 ];
 
 /** 비멤버: 공개 팀만 조회 가능(멤버 전용 탭 없음) */
-function TeamPublicDetail({ team }: { team: TeamDetail }) {
+function TeamPublicDetail({ team, isFavorite }: { team: TeamDetail; isFavorite: boolean }) {
     const router = useRouter();
     const t = useTranslations("teams.detail");
     const memberCount = team._count?.members ?? team.members.length;
@@ -63,9 +68,12 @@ function TeamPublicDetail({ team }: { team: TeamDetail }) {
                         </svg>
                     </button>
                     <div className="min-w-0 flex-1">
-                        <h1 className="truncate text-lg font-semibold text-stone-800 sm:text-xl">
-                            {team.name}
-                        </h1>
+                        <div className="flex items-center gap-1.5">
+                            <h1 className="truncate text-lg font-semibold text-stone-800 sm:text-xl">
+                                {team.name}
+                            </h1>
+                            <TeamFavoriteButton teamId={team.id} initialIsFavorite={isFavorite} size="sm" />
+                        </div>
                         <p className="truncate text-xs text-stone-500 sm:text-sm">
                             {team.shortDescription?.trim() || t("public.shortDescriptionFallback")}
                         </p>
@@ -319,6 +327,132 @@ function TeamSecuritySection({ team }: { team: TeamDetail }) {
     );
 }
 
+// ── 활동 로그 (설정 서브탭) ────────────────────────────────────────────────
+type ActivityEvent = {
+    id: string;
+    kind: "team_created" | "member_joined" | "member_leader" | "project_linked";
+    actorName: string;
+    targetName?: string;
+    date: string;
+};
+
+function buildActivityLog(team: TeamDetail): ActivityEvent[] {
+    const events: ActivityEvent[] = [];
+
+    // 팀 생성
+    events.push({
+        id: `created-${team.id}`,
+        kind: "team_created",
+        actorName: team.createdBy.name?.trim() || team.createdBy.email,
+        date: team.createdAt,
+    });
+
+    // 팀원 참여
+    for (const m of team.members) {
+        events.push({
+            id: `joined-${m.user.id}`,
+            kind: m.role === "LEADER" ? "member_leader" : "member_joined",
+            actorName: m.user.name?.trim() || m.user.email,
+            date: m.joinedAt,
+        });
+    }
+
+    // 프로젝트 연결
+    for (const p of team.projects ?? []) {
+        events.push({
+            id: `project-${p.id}`,
+            kind: "project_linked",
+            actorName: "",
+            targetName: p.name,
+            date: p.createdAt,
+        });
+    }
+
+    // 최신순 정렬
+    return events.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+}
+
+const ACTIVITY_ICON: Record<ActivityEvent["kind"], { path: string; color: string }> = {
+    team_created: {
+        path: "M12 9v6m3-3H9m12 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z",
+        color: "bg-sky-50 text-sky-500",
+    },
+    member_joined: {
+        path: "M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z",
+        color: "bg-emerald-50 text-emerald-500",
+    },
+    member_leader: {
+        path: "M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z",
+        color: "bg-amber-50 text-amber-500",
+    },
+    project_linked: {
+        path: "M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44Z",
+        color: "bg-violet-50 text-violet-500",
+    },
+};
+
+function TeamActivityLogSection({ team }: { team: TeamDetail }) {
+    const events = buildActivityLog(team);
+
+    function eventLabel(ev: ActivityEvent): string {
+        switch (ev.kind) {
+            case "team_created":
+                return `${ev.actorName}님이 팀을 생성했습니다.`;
+            case "member_joined":
+                return `${ev.actorName}님이 팀에 참여했습니다.`;
+            case "member_leader":
+                return `${ev.actorName}님이 팀장으로 지정됐습니다.`;
+            case "project_linked":
+                return `프로젝트 "${ev.targetName}"가 팀에 연결됐습니다.`;
+        }
+    }
+
+    return (
+        <div>
+            <h2 className="mb-1 text-base font-semibold text-stone-800">활동 로그</h2>
+            <p className="mb-5 text-sm text-stone-500">
+                팀의 주요 변경 이력입니다. 리더와 관리자만 확인할 수 있습니다.
+            </p>
+            {events.length === 0 ? (
+                <p className="text-sm text-stone-400">기록된 활동이 없습니다.</p>
+            ) : (
+                <ol className="relative border-l border-stone-200">
+                    {events.map((ev) => {
+                        const icon = ACTIVITY_ICON[ev.kind];
+                        return (
+                            <li key={ev.id} className="mb-6 ml-6 last:mb-0">
+                                <span
+                                    className={`absolute -left-3.5 flex h-7 w-7 items-center justify-center rounded-full ring-4 ring-white ${icon.color}`}
+                                >
+                                    <svg
+                                        className="h-3.5 w-3.5"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        strokeWidth={1.8}
+                                        stroke="currentColor"
+                                    >
+                                        <path
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            d={icon.path}
+                                        />
+                                    </svg>
+                                </span>
+                                <p className="text-sm font-medium text-stone-800">
+                                    {eventLabel(ev)}
+                                </p>
+                                <time className="mt-0.5 block text-xs text-stone-400">
+                                    {formatDateKo(ev.date)}
+                                </time>
+                            </li>
+                        );
+                    })}
+                </ol>
+            )}
+        </div>
+    );
+}
+
 function truncateText(str: string, maxLen: number): string {
     if (str.length <= maxLen) return str;
     return str.slice(0, maxLen) + "…";
@@ -378,7 +512,15 @@ function AvatarStack({
     );
 }
 
-export function TeamDetailPageClient({ team }: { team: TeamDetail }) {
+export function TeamDetailPageClient({
+    team,
+    isFavorite = false,
+    isSuperAdmin = false,
+}: {
+    team: TeamDetail;
+    isFavorite?: boolean;
+    isSuperAdmin?: boolean;
+}) {
     const router = useRouter();
     const t = useTranslations("teams.detail");
     const [activeTab, setActiveTab] = useState<TeamTab>("intro");
@@ -427,10 +569,23 @@ export function TeamDetailPageClient({ team }: { team: TeamDetail }) {
     const projects = team.projects ?? [];
 
     if (team.viewerRole === null) {
-        return <TeamPublicDetail team={team} />;
+        return <TeamPublicDetail team={team} isFavorite={isFavorite} />;
     }
 
     const isLeader = team.viewerRole === "LEADER";
+    const canSeeSettings = isLeader || isSuperAdmin;
+
+    // 설정 탭은 팀 리더 + 슈퍼관리자만 접근 가능
+    const TABS = canSeeSettings
+        ? ALL_TABS
+        : ALL_TABS.filter((t) => t !== "settings");
+
+    // 권한 없는 탭에 머물러 있으면 intro로 강제 이동
+    useEffect(() => {
+        if (activeTab === "settings" && !canSeeSettings) {
+            setActiveTab("intro");
+        }
+    }, [activeTab, canSeeSettings]);
 
     useEffect(() => {
         if (activeTab !== "intro") {
@@ -469,9 +624,12 @@ export function TeamDetailPageClient({ team }: { team: TeamDetail }) {
                         </svg>
                     </button>
                     <div className="min-w-0 flex-1">
-                        <h1 className="truncate text-lg font-semibold text-stone-800 sm:text-xl">
-                            {team.name}
-                        </h1>
+                        <div className="flex items-center gap-1.5">
+                            <h1 className="truncate text-lg font-semibold text-stone-800 sm:text-xl">
+                                {team.name}
+                            </h1>
+                            <TeamFavoriteButton teamId={team.id} initialIsFavorite={isFavorite} size="sm" />
+                        </div>
                         <p className="truncate text-xs text-stone-500 sm:text-sm">
                             {team.shortDescription?.trim() || t("header.shortDescriptionFallback")}
                         </p>
@@ -860,13 +1018,61 @@ export function TeamDetailPageClient({ team }: { team: TeamDetail }) {
                     </div>
                 )}
 
+                {/* ── 커뮤니티 탭 ─────────────────────────────────────────────── */}
+                {activeTab === "community" && (
+                    <div className="flex flex-col items-center justify-center px-4 py-20 text-center sm:py-28">
+                        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-stone-100 text-stone-400">
+                            <svg
+                                className="h-8 w-8"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={1.4}
+                                stroke="currentColor"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z"
+                                />
+                            </svg>
+                        </div>
+                        <h3 className="mb-2 text-base font-semibold text-stone-700">
+                            {t("community.emptyTitle")}
+                        </h3>
+                        <p className="mb-6 max-w-sm text-sm text-stone-500">
+                            {t("community.comingSoon")}
+                        </p>
+                        <button
+                            type="button"
+                            disabled
+                            className="inline-flex cursor-not-allowed items-center gap-2 rounded-lg bg-stone-800 px-5 py-2.5 text-sm font-medium text-white opacity-40"
+                        >
+                            <svg
+                                className="h-4 w-4"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                strokeWidth={2}
+                                stroke="currentColor"
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M12 4.5v15m7.5-7.5h-15"
+                                />
+                            </svg>
+                            {t("community.writePost")}
+                        </button>
+                    </div>
+                )}
+
+                {/* ── 설정 탭 ──────────────────────────────────────────────────── */}
                 {activeTab === "settings" && (
                     <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
                         <nav
                             className="flex shrink-0 gap-1 overflow-x-auto pb-1 lg:w-44 lg:flex-col lg:overflow-x-visible lg:pb-0"
                             aria-label="팀 설정 하위 탭"
                         >
-                            {TEAM_SETTINGS_SUB_TABS.map(({ id, icon }) => {
+                            {ALL_SETTINGS_SUB_TABS.map(({ id, icon }) => {
                                 const isActive = settingsSubTab === id;
                                 return (
                                     <button
@@ -1027,6 +1233,10 @@ export function TeamDetailPageClient({ team }: { team: TeamDetail }) {
                             )}
 
                             {settingsSubTab === "security" && <TeamSecuritySection team={team} />}
+
+                            {settingsSubTab === "activityLog" && (
+                                <TeamActivityLogSection team={team} />
+                            )}
                         </div>
                     </div>
                 )}

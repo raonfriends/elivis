@@ -34,6 +34,46 @@ interface ClientToServerEvents {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// OS 데스크톱 알림 (Web Notifications API)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * 브라우저 알림 권한을 요청합니다.
+ * 이미 허가된 경우에는 즉시 'granted'를 반환합니다.
+ */
+async function requestNotificationPermission(): Promise<boolean> {
+  if (typeof window === "undefined" || !("Notification" in window)) return false;
+  if (Notification.permission === "granted") return true;
+  if (Notification.permission === "denied") return false;
+  const result = await Notification.requestPermission();
+  return result === "granted";
+}
+
+/**
+ * 탭이 비활성 또는 브라우저가 최소화된 상태일 때만 OS 알림을 표시합니다.
+ * (탭이 활성화된 상태에서는 앱 내 드롭다운으로 충분하기 때문)
+ */
+function showDesktopNotification(title: string, body: string | null) {
+  if (typeof window === "undefined" || !("Notification" in window)) return;
+  if (Notification.permission !== "granted") return;
+  // 페이지가 포커스 상태면 OS 알림 생략
+  if (document.visibilityState === "visible" && document.hasFocus()) return;
+
+  const n = new Notification(title, {
+    body: body ?? undefined,
+    icon: "/favicon.ico",
+    badge: "/favicon.ico",
+    tag: "elivis-notification", // 같은 태그면 덮어쓰기(중복 방지)
+  });
+
+  // 클릭하면 탭으로 포커스 이동
+  n.onclick = () => {
+    window.focus();
+    n.close();
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // 훅
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -46,6 +86,11 @@ export function useNotifications(accessToken: string | null) {
     ServerToClientEvents,
     ClientToServerEvents
   > | null>(null);
+
+  // 앱 로드 시 OS 알림 권한 요청
+  useEffect(() => {
+    void requestNotificationPermission();
+  }, []);
 
   useEffect(() => {
     if (!accessToken) return;
@@ -82,6 +127,8 @@ export function useNotifications(accessToken: string | null) {
     socket.on("notification:new", (notification) => {
       setNotifications((prev) => [notification, ...prev]);
       setUnreadCount((prev) => prev + 1);
+      // 브라우저 최소화·탭 비활성 시 OS 데스크톱 알림 표시
+      showDesktopNotification(notification.title, notification.message);
     });
 
     socket.on("notification:updated", ({ id, isRead }) => {

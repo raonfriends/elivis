@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 import type { ApiWorkspaceListItem } from "@/lib/map-api-workspace";
+import type { ApiTeamFavoriteItem } from "@/lib/map-api-team";
+import type { ApiProjectFavoriteItem } from "@/lib/map-api-project";
 
+/** @deprecated sessionStorage 방식은 더 이상 사용하지 않습니다. 하위 호환을 위해 유지 */
 export const NOTIFICATION_READ_KEY = "elivis-notifications-all-read";
 export const NOTIFICATION_READ_EVENT = "elivis-notifications-read";
 
@@ -52,12 +55,14 @@ interface AppSidebarProps {
   onSizeChange: (s: SidebarSize) => void;
   isSuperAdmin?: boolean;
   workspaces?: ApiWorkspaceListItem[];
+  /** 실시간 읽지 않은 알림 수 (0 이상이면 뱃지 표시) */
+  unreadNotificationCount?: number;
+  /** 팀 즐겨찾기 목록 */
+  teamFavorites?: ApiTeamFavoriteItem[];
+  /** 프로젝트 즐겨찾기 목록 */
+  projectFavorites?: ApiProjectFavoriteItem[];
 }
 
-function getHasUnreadNotifications(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.sessionStorage.getItem(NOTIFICATION_READ_KEY) !== "1";
-}
 
 export function AppSidebar({
   open,
@@ -66,22 +71,18 @@ export function AppSidebar({
   onSizeChange,
   isSuperAdmin = false,
   workspaces = [],
+  unreadNotificationCount = 0,
+  teamFavorites = [],
+  projectFavorites = [],
 }: AppSidebarProps) {
   const pathname = usePathname();
   const tNav = useTranslations("nav");
   const tSidebar = useTranslations("sidebar");
-  // 서버/클라이언트 초기 렌더를 동일하게 하기 위해 false로 고정. 실제 값은 useEffect에서 반영.
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false);
   const [workspaceExpanded, setWorkspaceExpanded] = useState(true);
   const showLabels = size === "expanded";
   const showFloatingRestore = size === "hidden";
 
-  useEffect(() => {
-    setHasUnreadNotifications(getHasUnreadNotifications());
-    const handler = () => setHasUnreadNotifications(false);
-    window.addEventListener(NOTIFICATION_READ_EVENT, handler);
-    return () => window.removeEventListener(NOTIFICATION_READ_EVENT, handler);
-  }, []);
+  const hasUnreadNotifications = unreadNotificationCount > 0;
 
   return (
     <>
@@ -210,20 +211,38 @@ export function AppSidebar({
                     <span className="relative shrink-0">
                       <Icon className="h-5 w-5 opacity-80" />
                       {showRedDot && !showLabels && (
-                        <span
-                          className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500"
-                          aria-hidden
-                        />
+                        href === "/notification" && unreadNotificationCount > 0 ? (
+                          <span
+                            className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-amber-500 text-[9px] font-bold text-white"
+                            aria-hidden
+                          >
+                            {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+                          </span>
+                        ) : (
+                          <span
+                            className="absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500"
+                            aria-hidden
+                          />
+                        )
                       )}
                     </span>
                     {showLabels && (
                       <>
                         <span className="min-w-0 flex-1 truncate">{tNav(labelKey)}</span>
                         {showRedDot && (
-                          <span
-                            className="ml-auto h-2 w-2 shrink-0 rounded-full bg-red-500"
-                            aria-hidden
-                          />
+                          href === "/notification" && unreadNotificationCount > 0 ? (
+                            <span
+                              className="ml-auto flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-bold text-white"
+                              aria-hidden
+                            >
+                              {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+                            </span>
+                          ) : (
+                            <span
+                              className="ml-auto h-2 w-2 shrink-0 rounded-full bg-red-500"
+                              aria-hidden
+                            />
+                          )
                         )}
                       </>
                     )}
@@ -232,6 +251,153 @@ export function AppSidebar({
               );
             })}
           </ul>
+
+          {/* 팀 즐겨찾기 섹션 */}
+          {teamFavorites.length > 0 && (
+            <div
+              className={`${
+                showLabels ? "my-4 border-t border-stone-100 pt-4" : "my-3 border-t border-stone-100 pt-3"
+              }`}
+            >
+              {showLabels ? (
+                <>
+                  <p className="px-3 py-1 text-xs font-medium uppercase tracking-wider text-stone-400">
+                    즐겨찾기 팀
+                  </p>
+                  <ul className="mt-1 space-y-0.5">
+                    {teamFavorites.map((fav) => {
+                      const isActive = pathname === `/teams/${fav.team.id}`;
+                      return (
+                        <li key={fav.id}>
+                          <Link
+                            href={`/teams/${fav.team.id}`}
+                            onClick={onClose}
+                            title={fav.team.name}
+                            className={`flex items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
+                              isActive
+                                ? "bg-orange-50 text-orange-800"
+                                : "text-stone-600 hover:bg-stone-100 hover:text-stone-800"
+                            }`}
+                          >
+                            <svg
+                              className="h-3.5 w-3.5 shrink-0 text-amber-400"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z"
+                              />
+                            </svg>
+                            <span className="min-w-0 flex-1 truncate text-xs">
+                              {fav.team.name}
+                            </span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
+              ) : (
+                /* collapsed: 즐겨찾기 팀 아이콘만 */
+                <div className="space-y-0.5">
+                  {teamFavorites.map((fav) => {
+                    const isActive = pathname === `/teams/${fav.team.id}`;
+                    return (
+                      <Link
+                        key={fav.id}
+                        href={`/teams/${fav.team.id}`}
+                        onClick={onClose}
+                        title={fav.team.name}
+                        className={`flex justify-center rounded-lg px-2 py-2 transition-colors hover:bg-stone-100 ${
+                          isActive ? "text-orange-700" : "text-amber-400"
+                        }`}
+                      >
+                        <svg
+                          className="h-5 w-5"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+                        </svg>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* 프로젝트 즐겨찾기 섹션 */}
+          {projectFavorites.length > 0 && (
+            <div
+              className={`${
+                showLabels ? "my-4 border-t border-stone-100 pt-4" : "my-3 border-t border-stone-100 pt-3"
+              }`}
+            >
+              {showLabels ? (
+                <>
+                  <p className="px-3 py-1 text-xs font-medium uppercase tracking-wider text-stone-400">
+                    즐겨찾기 프로젝트
+                  </p>
+                  <ul className="mt-1 space-y-0.5">
+                    {projectFavorites.map((fav) => {
+                      const isActive = pathname === `/projects/${fav.project.id}`;
+                      return (
+                        <li key={fav.id}>
+                          <Link
+                            href={`/projects/${fav.project.id}`}
+                            onClick={onClose}
+                            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm transition-colors ${
+                              isActive
+                                ? "bg-orange-50 text-orange-800"
+                                : "text-stone-600 hover:bg-stone-100 hover:text-stone-800"
+                            }`}
+                          >
+                            <svg
+                              className="h-3.5 w-3.5 shrink-0 text-amber-400"
+                              viewBox="0 0 24 24"
+                              fill="currentColor"
+                            >
+                              <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+                            </svg>
+                            <span className="min-w-0 truncate">{fav.project.name}</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </>
+              ) : (
+                /* collapsed: 즐겨찾기 프로젝트 아이콘만 */
+                <div className="space-y-0.5">
+                  {projectFavorites.map((fav) => {
+                    const isActive = pathname === `/projects/${fav.project.id}`;
+                    return (
+                      <Link
+                        key={fav.id}
+                        href={`/projects/${fav.project.id}`}
+                        onClick={onClose}
+                        title={fav.project.name}
+                        className={`flex justify-center rounded-lg px-2 py-2 transition-colors hover:bg-stone-100 ${
+                          isActive ? "text-orange-700" : "text-amber-400"
+                        }`}
+                      >
+                        <svg
+                          className="h-5 w-5"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.562.562 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.562.562 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5Z" />
+                        </svg>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
 
           <div
             className={`${

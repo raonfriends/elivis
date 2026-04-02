@@ -1,19 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { useNotifications } from "@/hooks/useNotifications";
+import type { NotificationItem } from "@/hooks/useNotifications";
 import { NotificationDropdown } from "./NotificationDropdown";
 
 interface NotificationBellProps {
-  accessToken: string | null;
+  notifications: NotificationItem[];
+  unreadCount: number;
+  onMarkAsRead: (id: string) => void;
+  onMarkAllAsRead: () => void;
 }
 
-export function NotificationBell({ accessToken }: NotificationBellProps) {
+export function NotificationBell({
+  notifications,
+  unreadCount,
+  onMarkAsRead,
+  onMarkAllAsRead,
+}: NotificationBellProps) {
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
-
-  const { notifications, unreadCount, markAsRead, markAllAsRead } =
-    useNotifications(accessToken);
 
   // 바깥 클릭 시 닫기
   useEffect(() => {
@@ -63,8 +68,8 @@ export function NotificationBell({ accessToken }: NotificationBellProps) {
       {open && (
         <NotificationDropdown
           notifications={notifications}
-          onMarkAsRead={markAsRead}
-          onMarkAllAsRead={markAllAsRead}
+          onMarkAsRead={onMarkAsRead}
+          onMarkAllAsRead={onMarkAllAsRead}
           onClose={() => setOpen(false)}
         />
       )}
