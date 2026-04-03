@@ -1,69 +1,61 @@
 # Elivis
 
-> 간단하고 쓸만한 것들만 모아놓은 프로젝트 매니징 앱  
-> A project management app with only the things that actually matter.
+**실사용에 맞춘 팀·프로젝트·업무 관리.** 웹과 데스크톱에서 같은 UI로 쓰고, 직접 서버에 올려 운영하는 **셀프 호스팅**을 전제로 두었습니다.
 
-복잡한 기능보다 **실제로 쓰는 기능**만 담았습니다.  
-팀 프로젝트를 만들고, 멤버를 초대하고, 업무를 나누는 것 — 그게 전부입니다.
+> English readers: **[README.en.md](README.en.md)** · **[Documentation (English)](docs/en/README.md)**
 
-We focused on features you'll actually use, not features that look good on a spec sheet.  
-Create a project, invite your team, divide the work — that's it.
+자세한 아키텍처·API·빌드 옵션은 **[`docs/`](docs/README.md)** (한국어) 를 참고하세요.
 
-웹 브라우저에서도, 데스크톱 앱으로도 동일한 화면으로 사용할 수 있으며,  
-직접 서버에 올려 운영하는 **셀프 호스팅**을 기본으로 설계했습니다.
-
-Works the same in a browser or as a desktop app,  
-and designed from the ground up for **self-hosting**.
-
----
-
-**Web** · **Desktop** · **API Server** 세 앱이 하나의 모노레포에서 코드를 공유합니다.  
-Three apps — Web, Desktop, API Server — sharing one codebase in a monorepo.
-
----
-
-## Made by
+### Made by
 
 [![Instagram](https://img.shields.io/badge/Instagram-%40hi.kimsunim-E4405F?logo=instagram&logoColor=white)](https://www.instagram.com/hi.kimsunim/)
 [![Threads](https://img.shields.io/badge/Threads-%40hi.kimsunim-000000?logo=threads&logoColor=white)](https://www.threads.com/@hi.kimsunim)
 
 ---
 
-## Tech Stack
+## 무엇을 하나요
 
-| Layer | Technology |
-|---|---|
-| Monorepo | pnpm workspaces + Turborepo |
-| Web | Next.js 16, React 19, Tailwind CSS |
-| Desktop | Electron 41 |
-| API | Fastify 5, Node.js 24 |
-| Database | PostgreSQL 16 + Prisma 6 |
-| Cache / Auth Store | Redis 7 |
-| Auth | JWT (Access 1d / Refresh 15d) + RBAC |
-| Language | TypeScript |
+- **팀**을 만들고 멤버를 초대하며, 팀 단위 **게시판(커뮤니티)** 으로 소통할 수 있습니다.
+- **프로젝트**를 만들고 멤버·역할을 관리하고, 사람마다 **워크스페이스(내 업무 보드)** 가 생깁니다.
+- 업무에 **상태·우선순위**, 댓글·첨부·노트, **업무 요청(수락/거절)** 을 둘 수 있습니다.
+- **알림**은 REST로 조회·읽음 처리하고, 실시간 갱신은 **Socket.IO** 알림 서버가 담당합니다.
+- 비어 있는 DB로 API를 처음 띄우면 터미널에 **초기 관리자용 setup 토큰**이 한 번 출력됩니다.
 
 ---
 
-## Prerequisites
+## 기술 스택 (요약)
 
-| Tool | Version |
-|---|---|
-| Node.js | 24.14.0+ |
-| pnpm | 9.x (`corepack enable`) |
-| Docker Desktop | latest |
+| 구분 | 기술 |
+|------|------|
+| 모노레포 | pnpm workspaces, Turborepo |
+| 웹 | Next.js 16, React 19, Tailwind CSS |
+| 데스크톱 | Electron 41 |
+| API | Fastify 5, Node.js 24+ |
+| 알림 서버 | Socket.IO, Redis Pub/Sub |
+| DB | PostgreSQL 16, Prisma 6 |
+| 캐시·세션 | Redis 7 |
+| 인증 | JWT(Access / Refresh) + RBAC |
 
 ---
 
-## Quick Start
+## 필요한 것
 
-### 1. Clone
+| 도구 | 버전 |
+|------|------|
+| Node.js | 24.14.0 이상 (`package.json` engines 참고) |
+| pnpm | 9.x (`corepack enable` 권장) |
+| Docker Desktop | 최신 (로컬 PostgreSQL·Redis용) |
+
+---
+
+## 빠른 시작
 
 ```bash
 git clone https://github.com/haeinkkk/elivis.git
 cd elivis
 ```
 
-### 2. Configure environment
+**1. 환경 변수**
 
 ```bash
 # macOS / Linux
@@ -73,181 +65,107 @@ cp env.example .env
 Copy-Item env.example .env
 ```
 
-Open `.env` and set your secrets:
+`.env`에서 `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`을 충분히 긴 무작위 값으로 바꿉니다. (`openssl rand -hex 32`)
 
-```env
-JWT_ACCESS_SECRET=<random-32-char-string>
-JWT_REFRESH_SECRET=<random-32-char-string>
-```
-
-> Generate a secret: `openssl rand -hex 32`
-
-### 3. One-command setup
+**2. 한 번에 셋업**
 
 ```bash
 pnpm setup
 ```
 
-This runs in order:
+- `pnpm install`
+- `docker compose up -d --wait` → PostgreSQL + Redis 기동
+- `prisma generate` 및 `prisma migrate dev` (`@repo/database`의 `db:setup`)
 
-1. `pnpm install` — install all dependencies
-2. `docker compose up -d --wait` — start PostgreSQL + Redis (waits for healthcheck)
-3. `prisma migrate dev` — apply database migrations
-
-### 4. Start development servers
+**3. 개발 서버**
 
 ```bash
 pnpm dev
 ```
 
-| Service | URL |
-|---|---|
-| Web | http://localhost:3000 |
-| API | http://localhost:4000 |
-| Desktop | Electron window (opens when web is ready) |
+| 서비스 | 주소 |
+|--------|------|
+| 웹 | http://localhost:3000 |
+| REST API | http://localhost:4000 |
+| 알림 (Socket.IO) | http://localhost:4001 (웹은 `NEXT_PUBLIC_NOTIFICATION_URL`로 연결) |
+| 데스크톱 | Electron 창 (`pnpm dev` 시 웹 준비 후 기동) |
 
 ---
 
-## First Admin Account
+## 사용 방법 (앱 관점)
 
-When the server starts with an **empty database**, it prints a one-time setup token in the terminal.  
-Use that token in the signup request to create the first `SUPER_ADMIN` account.
+1. **첫 계정**  
+   DB에 사용자가 없을 때만 API 서버 로그에 `SETUP TOKEN`이 출력됩니다. 그때는 회원가입 요청에 `setupToken`을 넣어 **SUPER_ADMIN**을 만듭니다. 이후 일반 사용자는 토큰 없이 가입·초대 흐름을 따릅니다. ([상세: `docs/server/README.md` — 초기 관리자](docs/server/README.md#초기-관리자-생성))
 
-```
-⚠️  INITIAL SETUP MODE
-   SETUP TOKEN : a3f9c21b04e87d65 (Random)
-```
+2. **브라우저에서 쓰기**  
+   http://localhost:3000 에서 로그인합니다. 팀·프로젝트·내 업무·알림·설정 등은 App Router 경로로 구성되어 있습니다. (구조: [`docs/web/README.md`](docs/web/README.md))
 
-```bash
-curl -X POST http://localhost:4000/api/auth/signup \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "admin@example.com",
-    "password": "strongpassword",
-    "setupToken": "a3f9c21b04e87d65"
-  }'
-```
+3. **데스크톱에서 쓰기**  
+   개발 시에는 웹(`3000`)이 떠 있는 상태에서 `pnpm dev`로 Electron이 같이 뜹니다. 설치 파일을 만들려면 웹 정적 빌드 후 데스크톱 패키징 순서를 따릅니다. ([`docs/desktop/README.md`](docs/desktop/README.md))
 
-→ See [`docs/server/README.md`](docs/server/README.md#초기-관리자-생성) for details.
+4. **관리자**  
+   `SUPER_ADMIN`은 관리 화면에서 사용자·역할을 다룹니다. ([API: `docs/server/README.md`](docs/server/README.md))
+
+5. **프로덕션**  
+   `.env.production` 준비 후 Docker 프로덕션 컴포즈로 기동하는 흐름은 [`docs/server/README.md` — 프로덕션](docs/server/README.md#프로덕션-빌드)을 참고하세요.
 
 ---
 
-## Scripts
+## 자주 쓰는 명령
 
-### Development
-
-| Command | Description |
-|---|---|
-| `pnpm setup` | Full environment setup (install → docker → migrate) |
-| `pnpm dev` | Start all apps in parallel |
-| `pnpm dev:web` | Start web only |
-| `pnpm dev:server` | Start API server (`apps/server/apiServer`) only |
-| `pnpm dev:desktop` | Start Electron only |
-
-### Build & Quality
-
-| Command | Description |
-|---|---|
-| `pnpm build` | Build all packages |
-| `pnpm build:desktop` | Build Electron installer |
-| `pnpm lint` | Run ESLint across all packages |
-| `pnpm type-check` | TypeScript type-check across all packages |
-
-### Database
-
-| Command | Description |
-|---|---|
-| `pnpm db:deploy` | Apply pending migrations to the database |
-| `pnpm db:studio` | Open Prisma Studio (visual DB browser) |
-
-### Docker
-
-| Command | Description |
-|---|---|
-| `pnpm docker:dev:up` | Start Docker services (dev) |
-| `pnpm docker:dev:down` | Stop Docker services (dev) |
-| `pnpm docker:dev:logs` | Tail Docker service logs (dev) |
-| `pnpm docker:prod:up` | Start all services in production mode |
-| `pnpm docker:prod:down` | Stop production containers |
-| `pnpm docker:prod:build` | Build production Docker images |
-| `pnpm docker:prod:logs` | Tail Docker service logs (prod) |
+| 명령 | 설명 |
+|------|------|
+| `pnpm setup` | 설치 + Docker + DB 마이그레이션 |
+| `pnpm dev` | 웹·API·알림·데스크톱 등 개발 모드 병렬 실행 |
+| `pnpm dev:web` / `pnpm dev:server` / `pnpm dev:notification` / `pnpm dev:desktop` | 앱 단독 실행 |
+| `pnpm build` | 패키지 전체 빌드 |
+| `pnpm build:desktop` | 웹 정적 빌드 포함 Electron 인스톨러 생성 |
+| `pnpm start` | 빌드 후 웹·API·알림 서버 동시 기동 (프로덕션형) |
+| `pnpm db:studio` | Prisma Studio |
+| `pnpm docker:dev:*` / `pnpm docker:prod:*` | 개발·프로덕션 Docker 제어 |
 
 ---
 
-## Project Structure
+## 저장소 구조 (요약)
 
 ```
-.
-├── apps/
-│   ├── web/                    # Next.js web app
-│   ├── desktop/                # Electron desktop client
-│   └── server/                 # Server apps (multiple servers)
-│       └── apiServer/          # Fastify REST API
-│           # (향후) notificationServer/
-│           # (향후) MCPServer/
-├── packages/
-│   ├── database/               # Prisma schema + client singleton
-│   ├── types/                  # Shared TypeScript types
-│   ├── ui/                     # Shared UI components
-│   ├── eslint-config/
-│   └── tsconfig/
-├── docs/
-│   ├── web/                    # Web app documentation
-│   ├── server/                 # Server documentation
-│   └── desktop/                # Desktop app documentation
-├── scripts/
-│   └── setup.mjs               # One-command setup script
-├── docker-compose.yml
-├── docker-compose.prod.yml
-└── env.example
+apps/
+  web/                 # Next.js
+  desktop/             # Electron
+  server/
+    apiServer/         # REST API
+    notificationServer/ # Socket.IO + Redis
+packages/
+  database/            # Prisma
+  ui/, types/, i18n/   # 공유 패키지
+docs/                  # 상세 문서 (앱별 README)
 ```
 
 ---
 
-## Documentation
+## 문서 목록
 
-Detailed documentation for each application lives in `docs/`:
+**한국어:** [문서 인덱스](docs/README.md) · [서버](docs/server/README.md) · [웹](docs/web/README.md) · [데스크톱](docs/desktop/README.md)
 
-| App | Link |
-|---|---|
-| API Server | [`docs/server/README.md`](docs/server/README.md) |
-| Web App | [`docs/web/README.md`](docs/web/README.md) |
-| Desktop App | [`docs/desktop/README.md`](docs/desktop/README.md) |
+**English:** [Docs index](docs/en/README.md) · [Server](docs/en/server/README.md) · [Web](docs/en/web/README.md) · [Desktop](docs/en/desktop/README.md)
 
 ---
 
-## Production Deployment
+## 기여
 
-```bash
-# Copy and configure production environment
-cp env.production.example .env.production
-# → edit .env.production with real secrets
+이슈와 PR을 환영합니다. 큰 변경은 먼저 이슈로 방향을 맞추면 좋습니다.
 
-# Build and start all production containers
-pnpm docker:prod:up
-```
-
-→ See [`docs/server/README.md`](docs/server/README.md#프로덕션-빌드) for full production guide.
+1. Fork 후 브랜치 생성  
+2. 커밋 후 Push  
+3. Pull Request
 
 ---
 
-## Contributing
-
-Contributions are welcome! Please open an issue first to discuss what you would like to change.
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
----
-
-## License
+## 라이선스
 
 MIT License
 
-Copyright (c) 2025 Elivis Contributors
+Copyright (c) 2026 Elivis Contributors
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

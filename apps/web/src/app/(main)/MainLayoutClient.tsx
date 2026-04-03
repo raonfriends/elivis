@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 import { AppHeader } from "@/components/AppHeader";
 import { AppSidebar } from "@/components/AppSidebar";
@@ -15,26 +16,30 @@ import type { ApiProjectFavoriteItem } from "@/lib/map-api-project";
 import { UserStatusProvider } from "@/context/UserStatusContext";
 import { NotificationContext } from "@/context/NotificationContext";
 
-const titles: Record<string, string> = {
-  "/mywork": "할 일",
-  "/teams": "팀",
-  "/teams/new": "팀 생성",
-  "/projects": "프로젝트",
-  "/projects/new": "프로젝트 생성",
-  "/notification": "알림",
-  "/workspace": "워크스페이스",
-  "/trash": "휴지통",
-  "/settings": "내 설정",
-};
+function getPageTitle(pathname: string | null, tNav: (key: string) => string): string {
+  if (!pathname) return tNav("myWork");
 
-function getPageTitle(pathname: string | null): string {
-  if (!pathname) return "할 일";
-  const exact = titles[pathname];
-  if (exact) return exact;
-  if (pathname.startsWith("/projects/") && pathname !== "/projects") return "프로젝트";
-  if (pathname.startsWith("/mywork/") && pathname !== "/mywork") return "할 일";
-  if (pathname.startsWith("/teams/") && pathname !== "/teams") return "팀";
-  return "할 일";
+  const exact: Record<string, string> = {
+    "/mywork": "myWork",
+    "/teams": "teams",
+    "/teams/new": "newTeam",
+    "/projects": "projects",
+    "/projects/new": "newProject",
+    "/notification": "notifications",
+    "/workspace": "workspace",
+    "/trash": "trash",
+    "/settings": "settings",
+    "/pages": "pages",
+  };
+
+  const key = exact[pathname];
+  if (key) return tNav(key);
+
+  if (pathname.startsWith("/projects/") && pathname !== "/projects") return tNav("projects");
+  if (pathname.startsWith("/mywork/") && pathname !== "/mywork") return tNav("myWork");
+  if (pathname.startsWith("/teams/") && pathname !== "/teams") return tNav("teams");
+
+  return tNav("myWork");
 }
 
 interface MainLayoutClientProps {
@@ -46,15 +51,21 @@ interface MainLayoutClientProps {
   projectFavorites: ApiProjectFavoriteItem[];
 }
 
-export function MainLayoutClient({ children, user, workspaces, accessToken, teamFavorites, projectFavorites }: MainLayoutClientProps) {
-  const [sidebarOpen, setSidebarOpen]   = useState(false);
-  const [sidebarSize, setSidebarSize]   = useState<"expanded" | "collapsed" | "hidden">("expanded");
+export function MainLayoutClient({
+  children,
+  user,
+  workspaces,
+  accessToken,
+  teamFavorites,
+  projectFavorites,
+}: MainLayoutClientProps) {
+  const tNav = useTranslations("nav");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarSize, setSidebarSize] = useState<"expanded" | "collapsed" | "hidden">("expanded");
   const pathname = usePathname();
-  const title    = getPageTitle(pathname);
+  const title = getPageTitle(pathname, tNav);
 
-  // 전역 알림 소켓 — Context로 AppSidebar 뱃지 + 헤더 벨 드롭다운이 공유
-  const { notifications, unreadCount, markAsRead, markAllAsRead } =
-    useNotifications(accessToken);
+  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications(accessToken);
 
   const [notifPanelOpen, setNotifPanelOpen] = useState(false);
 
@@ -70,32 +81,27 @@ export function MainLayoutClient({ children, user, workspaces, accessToken, team
         closePanel: () => setNotifPanelOpen(false),
       }}
     >
-    <UserStatusProvider initialStatus={user?.status ?? "WORKING"}>
-      <div className="flex h-screen bg-[#f8f7f5]">
-        <TopLoadingBar />
-        <AppSidebar
-          open={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-          size={sidebarSize}
-          onSizeChange={setSidebarSize}
-          isSuperAdmin={user?.systemRole === "SUPER_ADMIN"}
-          workspaces={workspaces}
-          teamFavorites={teamFavorites}
-          projectFavorites={projectFavorites}
-        />
-        <div className="flex min-w-0 flex-1 flex-col">
-          <AppHeader
-            onMenuClick={() => setSidebarOpen((o) => !o)}
-            title={title}
-            user={user}
+      <UserStatusProvider initialStatus={user?.status ?? "WORKING"}>
+        <div className="flex h-screen bg-[#f8f7f5]">
+          <TopLoadingBar />
+          <AppSidebar
+            open={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            size={sidebarSize}
+            onSizeChange={setSidebarSize}
+            isSuperAdmin={user?.systemRole === "SUPER_ADMIN"}
+            workspaces={workspaces}
+            teamFavorites={teamFavorites}
+            projectFavorites={projectFavorites}
           />
-          <main className="relative z-0 min-h-0 flex-1 overflow-auto">{children}</main>
-        </div>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <AppHeader onMenuClick={() => setSidebarOpen((o) => !o)} title={title} user={user} />
+            <main className="relative z-0 min-h-0 flex-1 overflow-auto">{children}</main>
+          </div>
 
-        {/* 통합 알림 패널 — 헤더 벨 + 사이드바 버튼이 공유 */}
-        <NotificationPanel />
-      </div>
-    </UserStatusProvider>
+          <NotificationPanel />
+        </div>
+      </UserStatusProvider>
     </NotificationContext.Provider>
   );
 }

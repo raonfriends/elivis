@@ -25,7 +25,6 @@ const TextStyle = TextStyleBase.extend({
 
 import {
     type ApiTeamPost,
-    type ApiTeamPostAttachment,
     type ApiTeamPostAuthor,
     type ApiTeamPostComment,
     listTeamPostsAction,
@@ -84,37 +83,6 @@ const CATEGORY_CARD: Record<PostCategory, { border: string; selectedBg: string; 
             hoverBg: "hover:bg-stone-50",
         },
     };
-
-// 상세 패널 헤더 & 섹션 색상
-const CATEGORY_DETAIL: Record<
-    PostCategory,
-    { headerBg: string; topBar: string; commentsBg: string; inputBorder: string }
-> = {
-    notice: {
-        headerBg: "bg-red-50/50",
-        topBar: "bg-red-400",
-        commentsBg: "bg-red-50/20",
-        inputBorder: "border-red-100",
-    },
-    discussion: {
-        headerBg: "bg-blue-50/50",
-        topBar: "bg-blue-400",
-        commentsBg: "bg-blue-50/20",
-        inputBorder: "border-blue-100",
-    },
-    share: {
-        headerBg: "bg-green-50/50",
-        topBar: "bg-green-400",
-        commentsBg: "bg-green-50/20",
-        inputBorder: "border-green-100",
-    },
-    general: {
-        headerBg: "bg-stone-50/60",
-        topBar: "bg-stone-300",
-        commentsBg: "bg-stone-50/40",
-        inputBorder: "border-stone-200",
-    },
-};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 유틸
@@ -1471,7 +1439,6 @@ export function TeamCommunityTab({
     isLeader: boolean;
 }) {
     const [posts, setPosts] = useState<ApiTeamPost[]>([]);
-    const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState<PostCategory | "all">("all");
 
@@ -1501,7 +1468,6 @@ export function TeamCommunityTab({
             });
             if (res.ok) {
                 setPosts(res.posts);
-                setTotal(res.total);
             }
             setLoading(false);
         },
@@ -1544,7 +1510,6 @@ export function TeamCommunityTab({
             if (res.ok) {
                 const newPost = { ...res.post, _count: { comments: 0 } };
                 setPosts((prev) => [newPost, ...prev]);
-                setTotal((n) => n + 1);
                 setSelectedPost({ ...newPost, comments: [] });
             }
         }
@@ -1560,7 +1525,6 @@ export function TeamCommunityTab({
             const res = await deleteTeamPostAction(teamId, postId);
             if (res.ok) {
                 setPosts((prev) => prev.filter((p) => p.id !== postId));
-                setTotal((n) => Math.max(0, n - 1));
                 if (selectedPost?.id === postId) setSelectedPost(null);
                 setDeleteConfirmId(null);
             }

@@ -1,8 +1,10 @@
 # Desktop — `apps/desktop`
 
 Electron 41 기반 데스크톱 애플리케이션입니다.  
-개발 환경에서는 `apps/web` 개발 서버(`localhost:3000`)를 로드하고,  
-프로덕션에서는 Next.js 정적 빌드 결과물을 직접 렌더링합니다.
+개발 환경에서는 `apps/web` 개발 서버(`http://localhost:3000`)를 로드하고,  
+프로덕션에서는 Next.js 정적 빌드 결과물(`apps/web/out`)을 번들에 넣어 렌더링합니다.
+
+API·알림 서버는 웹과 동일하게 원격(또는 로컬) URL을 바라보며, 루트 `.env`의 `NEXT_PUBLIC_*` 값이 빌드 시점에 반영됩니다.
 
 ## 목차
 
@@ -44,13 +46,13 @@ apps/desktop/
 
 > **전제 조건:** `apps/web` 개발 서버(`localhost:3000`)가 먼저 실행 중이어야 합니다.
 
-루트에서 전체 앱과 함께 실행 (권장):
+루트에서 웹·API·알림·데스크톱을 함께 실행 (권장):
 
 ```bash
 pnpm dev
 ```
 
-데스크톱만 단독 실행 (웹이 이미 실행 중일 때):
+데스크톱만 단독 실행 (웹 개발 서버가 이미 떠 있을 때):
 
 ```bash
 pnpm dev:desktop

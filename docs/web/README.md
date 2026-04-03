@@ -1,7 +1,6 @@
 # Web — `apps/web`
 
-Next.js 16 기반 웹 애플리케이션입니다.  
-`packages/ui`의 공유 컴포넌트를 렌더링하며, API 서버(`apps/server/apiServer`)와 통신합니다.
+Next.js 16(App Router) 기반 웹 앱입니다. REST API(`@repo/api-server`)와 통신하고, 알림은 **Socket.IO 클라이언트**로 `notificationServer`에 연결합니다.
 
 ## 목차
 
@@ -9,8 +8,9 @@ Next.js 16 기반 웹 애플리케이션입니다.
 - [디렉토리 구조](#디렉토리-구조)
 - [환경 변수](#환경-변수)
 - [개발 서버 실행](#개발-서버-실행)
-- [UI 아키텍처](#ui-아키텍처)
-- [정적 내보내기 (Electron용)](#정적-내보내기-electron용)
+- [UI 구성](#ui-구성)
+- [실시간 알림](#실시간-알림)
+- [정적보내기 (Electron용)](#정적-보내기-electron용)
 - [프로덕션 빌드](#프로덕션-빌드)
 - [문제 해결](#문제-해결)
 
@@ -19,12 +19,13 @@ Next.js 16 기반 웹 애플리케이션입니다.
 ## 기술 스택
 
 | 항목 | 버전 |
-|---|---|
+|------|------|
 | Framework | Next.js 16 (App Router) |
 | UI | React 19 + Tailwind CSS |
-| 공유 컴포넌트 | `@repo/ui` |
-| 공유 타입 | `@repo/types` |
+| 공유 패키지 | `@repo/ui`, `@repo/types`, `@repo/i18n`, `@repo/docs` |
 | 컴파일러 | React Compiler (`reactCompiler: true`) |
+| 리치 텍스트 등 | TipTap, react-markdown 등 (도메인 화면에서 사용) |
+| 실시간 | socket.io-client |
 
 ---
 
@@ -32,42 +33,47 @@ Next.js 16 기반 웹 애플리케이션입니다.
 
 ```
 apps/web/src/
-├── app/                  # Next.js App Router
-│   ├── (main)/           # 메인 레이아웃 그룹
-│   │   ├── layout.tsx
-│   │   ├── page.tsx
-│   │   ├── mywork/[id]/
-│   │   │   └── layout.tsx  # generateStaticParams 포함 (정적 빌드용)
-│   │   └── projects/[id]/
-│   │       └── layout.tsx  # generateStaticParams 포함 (정적 빌드용)
-│   └── globals.css
-└── components/           # 페이지 전용 컴포넌트
+├── app/
+│   ├── layout.tsx, globals.css
+│   ├── login/
+│   ├── (main)/                 # 로그인 후 메인 셸
+│   │   ├── page.tsx            # 홈
+│   │   ├── teams/, projects/, mywork/
+│   │   ├── notification/, settings/, trash/, workspace/
+│   │   └── pages/              # 정적 페이지 그룹
+│   ├── (admin)/admin/          # SUPER_ADMIN
+│   └── docx/                   # 기타 라우트
+├── components/                 # 앱 전용 컴포넌트·클라이언트 위젯
+└── ...
 ```
+
+동적 세그먼트(`[id]`)가 있는 라우트는 Electron 정적 빌드용으로 `layout.tsx` 등에 `generateStaticParams`가 필요할 수 있습니다.
 
 ---
 
 ## 환경 변수
 
-모든 환경 변수는 **모노레포 루트의 `.env`** 하나로 관리됩니다.  
-`next.config.ts`가 빌드·실행 전에 루트 `.env`를 자동으로 로드합니다.
+루트 **`.env`** 하나로 관리합니다. `next.config.ts`가 빌드·실행 시 루트 `.env`를 로드합니다.
 
 | 키 | 설명 | 예시 |
-|---|---|---|
-| `NEXT_PUBLIC_API_URL` | API 서버 기본 URL | `http://localhost:4000` |
+|----|------|------|
+| `NEXT_PUBLIC_API_URL` | REST API 베이스 URL | `http://localhost:4000` |
+| `NEXT_PUBLIC_NOTIFICATION_URL` | Socket.IO 알림 서버 URL | `http://localhost:4001` |
+| `NEXT_PUBLIC_UPLOAD_MAX_FILE_SIZE_MB` | 클라이언트 업로드 검증 (서버와 맞출 것) | `50` |
 
-> `NEXT_PUBLIC_` 접두사가 붙은 변수만 브라우저에 노출됩니다.
+> 브라우저에 노출되려면 `NEXT_PUBLIC_` 접두사가 필요합니다.
 
 ---
 
 ## 개발 서버 실행
 
-루트에서 전체 앱과 함께 실행:
+루트에서 전체 스택:
 
 ```bash
 pnpm dev
 ```
 
-웹만 단독 실행:
+웹만:
 
 ```bash
 pnpm dev:web
@@ -75,70 +81,68 @@ pnpm dev:web
 pnpm --filter web dev
 ```
 
-웹은 `http://localhost:3000`에서 실행됩니다.
+기본 주소: http://localhost:3000
+
+알림 UI를 쓰려면 알림 서버도 떠 있어야 합니다 (`pnpm dev` 또는 `pnpm dev:notification`).
 
 ---
 
-## UI 아키텍처
+## UI 구성
 
-```
-packages/ui/          ← 화면 단위 컴포넌트 (비즈니스 UI)
-    └─ 공유됨
-         ├─ apps/web/     (Next.js가 라우팅·데이터 페칭 담당)
-         └─ apps/desktop/ (Electron이 웹 UI를 그대로 로드)
-```
+- **`packages/ui`**: 여러 화면에서 재사용하는 공유 UI.
+- **`apps/web/src/components`**: 이 앱에만 묶인 큰 패널·탭·클라이언트 전용 위젯 등.
+- **`apps/web/src/app`**: 라우팅, 레이아웃, Server Actions·서버 컴포넌트에서의 데이터 접근.
 
-- **모든 화면 컴포넌트**는 `packages/ui`에 작성합니다.
-- `apps/web`은 라우팅, 데이터 페칭(server components/actions), Next.js 특화 로직만 담당합니다.
-- 이 구조 덕분에 웹과 데스크톱이 **동일한 UI**를 공유합니다.
+데스크톱(`apps/desktop`)은 프로덕션에서 정적 빌드된 웹을 로드하므로, 공유 UI는 가능한 한 `@repo/ui`와 동일 규약을 유지하는 것이 좋습니다.
 
 ---
 
-## 정적 내보내기 (Electron용)
+## 실시간 알림
 
-Electron 프로덕션 빌드에서는 Next.js를 정적 HTML/CSS/JS로 내보내야 합니다.
+클라이언트는 `NEXT_PUBLIC_NOTIFICATION_URL`의 Socket.IO 엔드포인트에 연결합니다. 연결 시 **Access JWT**를 넘기고, 서버는 `user:{userId}` 룸으로 이벤트를 보냅니다. (서버 쪽: [`docs/server/README.md` — 알림 서버](../server/README.md#알림-서버-socketio))
+
+---
+
+## 정적보내기 (Electron용)
 
 ```bash
-# Windows
-set ELECTRON_STATIC=1 && pnpm --filter web build
-
-# macOS / Linux
-ELECTRON_STATIC=1 pnpm --filter web build
-
-# 또는 루트 스크립트
 pnpm --filter web build:static
+# 또는
+# Windows: set ELECTRON_STATIC=1 && pnpm --filter web build
+# macOS/Linux: ELECTRON_STATIC=1 pnpm --filter web build
 ```
 
-빌드 결과물: `apps/web/out/`
+산출물: `apps/web/out/`
 
-> **주의**: 정적 내보내기 시 서버 컴포넌트, API Routes, `getServerSideProps` 등 서버 전용 기능은 사용할 수 없습니다. 동적 라우트(`[id]`)가 있는 페이지에는 반드시 `generateStaticParams`를 추가해야 합니다.
+> 정적 빌드에서는 서버 전용 Next 기능에 제한이 있습니다. `[id]` 등 동적 라우트에는 `generateStaticParams`가 필요합니다.
 
 ---
 
 ## 프로덕션 빌드
 
-일반 Next.js 서버 모드 빌드:
+Next 서버 모드:
 
 ```bash
 pnpm --filter web build
-pnpm --filter web start   # http://localhost:3000
+pnpm --filter web start
 ```
 
-또는 루트에서:
+모노레포 루트:
 
 ```bash
 pnpm build
 pnpm start
 ```
 
+`pnpm start`는 웹·API·알림 서버를 함께 띄우도록 구성되어 있습니다. 배포 형태에 맞게 프로세스를 나누어도 됩니다.
+
 ---
 
 ## 문제 해결
 
-**빌드 실패: `generateStaticParams` 누락**
+**`generateStaticParams` 누락으로 정적 빌드 실패**
 
-`ELECTRON_STATIC=1` 빌드 시 동적 라우트 세그먼트가 있는 페이지에서 발생합니다.  
-해당 경로의 `layout.tsx` 또는 `page.tsx`에 아래를 추가하세요.
+`ELECTRON_STATIC=1` / `build:static` 시 동적 세그먼트 페이지에서 발생할 수 있습니다.
 
 ```typescript
 export function generateStaticParams() {
@@ -146,7 +150,10 @@ export function generateStaticParams() {
 }
 ```
 
-**환경 변수가 적용되지 않음**
+**환경 변수가 브라우저에 안 보임**
 
-루트 `.env`에 해당 변수가 있는지 확인하세요.  
-`NEXT_PUBLIC_` 접두사가 없는 변수는 브라우저에서 접근할 수 없습니다.
+루트 `.env`에 `NEXT_PUBLIC_` 접두사가 있는지 확인하세요.
+
+**알림이 실시간으로 안 옴**
+
+`notificationServer` 기동 여부, `NEXT_PUBLIC_NOTIFICATION_URL`, `CORS_ORIGIN`에 웹 Origin 포함 여부를 확인하세요.

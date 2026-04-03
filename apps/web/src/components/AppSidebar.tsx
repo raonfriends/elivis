@@ -9,10 +9,6 @@ import type { ApiTeamFavoriteItem } from "@/lib/map-api-team";
 import type { ApiProjectFavoriteItem } from "@/lib/map-api-project";
 import { useNotificationContext } from "@/context/NotificationContext";
 
-/** @deprecated sessionStorage 방식은 더 이상 사용하지 않습니다. 하위 호환을 위해 유지 */
-export const NOTIFICATION_READ_KEY = "elivis-notifications-all-read";
-export const NOTIFICATION_READ_EVENT = "elivis-notifications-read";
-
 export type SidebarSize = "expanded" | "collapsed" | "hidden";
 
 const navItemDefs = [
