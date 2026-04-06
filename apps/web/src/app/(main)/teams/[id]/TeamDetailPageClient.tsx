@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import {
@@ -126,10 +126,7 @@ export function TeamDetailPageClient({
         setShortDescDraft(team.shortDescription ?? "");
     }, [team.id, team.shortDescription]);
 
-    const memberUserIds = useMemo(
-        () => team.members.map((m) => m.user.id),
-        [team.members],
-    );
+    const memberUserIds = team.members.map((m) => m.user.id);
 
     const stackMembers = team.members.map((m) => ({
         id: m.user.id,

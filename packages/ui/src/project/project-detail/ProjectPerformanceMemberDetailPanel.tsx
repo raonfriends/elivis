@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 
@@ -172,23 +172,13 @@ export function ProjectPerformanceMemberDetailPanel({
         setPortalReady(true);
     }, []);
 
-    const stats = useMemo(
-        () => assigneeTaskStats(tasks, statusById, today),
-        [tasks, statusById, today],
+    const stats = assigneeTaskStats(tasks, statusById, today);
+
+    const sortedTasks = [...tasks].sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
     );
 
-    const sortedTasks = useMemo(
-        () =>
-            [...tasks].sort(
-                (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
-            ),
-        [tasks],
-    );
-
-    const filteredTasks = useMemo(
-        () => filterTasksByStat(sortedTasks, statFilter, statusById, today),
-        [sortedTasks, statFilter, statusById, today],
-    );
+    const filteredTasks = filterTasksByStat(sortedTasks, statFilter, statusById, today);
 
     const totalPages = Math.max(1, Math.ceil(filteredTasks.length / PAGE_SIZE));
 

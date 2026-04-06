@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import type {
@@ -593,132 +593,111 @@ export function ProjectTasksTab({
     }
 
     // 모든 워크스페이스 업무에 소유자·상태·우선순위 컨텍스트 부착
-    const allEnrichedTasks = useMemo<EnrichedTask[]>(
-        () =>
-            projectTasksData.flatMap(({ workspace, tasks, statuses, priorities }) =>
-                tasks.map((t) => ({
-                    ...t,
-                    _workspaceId: workspace.id,
-                    _workspaceOwner: workspace.user,
-                    _statuses: statuses,
-                    _priorities: priorities,
-                })),
-            ),
-        [projectTasksData],
+    const allEnrichedTasks: EnrichedTask[] = projectTasksData.flatMap(
+        ({ workspace, tasks, statuses, priorities }) =>
+            tasks.map((t) => ({
+                ...t,
+                _workspaceId: workspace.id,
+                _workspaceOwner: workspace.user,
+                _statuses: statuses,
+                _priorities: priorities,
+            })),
     );
 
     // 팀원 옵션 (워크스페이스 소유자 기준)
-    const memberOptions = useMemo<MemberOption[]>(() => {
+    const memberOptions: MemberOption[] = (() => {
         const seen = new Set<string>();
         return projectTasksData
             .map(({ workspace }) => workspace.user)
-            .filter((u) => { if (seen.has(u.id)) return false; seen.add(u.id); return true; })
+            .filter((u) => {
+                if (seen.has(u.id)) return false;
+                seen.add(u.id);
+                return true;
+            })
             .map((u) => ({
                 id: u.id,
-                name: (u.name?.trim() || u.email.split("@")[0]),
+                name: u.name?.trim() || u.email.split("@")[0],
                 avatarUrl: u.avatarUrl,
             }));
-    }, [projectTasksData]);
+    })();
 
     // 필터 옵션: 전체 작업에서 중복 제거
-    const statusOptions = useMemo(() => {
-        const names = new Set<string>();
-        allEnrichedTasks.forEach((t) => names.add(t.status.name));
-        return [
-            { value: "all", label: tList("filterAllStatuses") },
-            ...[...names].sort().map((n) => ({ value: n, label: n })),
-        ];
-    }, [allEnrichedTasks, tList]);
+    const statusNames = new Set<string>();
+    allEnrichedTasks.forEach((t) => statusNames.add(t.status.name));
+    const statusOptions = [
+        { value: "all", label: tList("filterAllStatuses") },
+        ...[...statusNames].sort().map((n) => ({ value: n, label: n })),
+    ];
 
-    const priorityOptions = useMemo(() => {
-        const seen = new Map<string, number>();
-        allEnrichedTasks.forEach((t) => {
-            if (t.priority) seen.set(t.priority.name, t.priority.value ?? 0);
-        });
-        return [
-            { value: "all", label: tList("filterAllPriorities") },
-            ...[...seen.entries()]
-                .sort((a, b) => b[1] - a[1])
-                .map(([name]) => ({ value: name, label: name })),
-        ];
-    }, [allEnrichedTasks, tList]);
+    const prioritySeen = new Map<string, number>();
+    allEnrichedTasks.forEach((t) => {
+        if (t.priority) prioritySeen.set(t.priority.name, t.priority.value ?? 0);
+    });
+    const priorityOptions = [
+        { value: "all", label: tList("filterAllPriorities") },
+        ...[...prioritySeen.entries()]
+            .sort((a, b) => b[1] - a[1])
+            .map(([name]) => ({ value: name, label: name })),
+    ];
 
-    const sortOptions: { value: SortBy; label: string }[] = useMemo(
-        () => [
-            { value: "default", label: tList("sortDefault") },
-            { value: "status", label: tList("sortStatus") },
-            { value: "priority", label: tList("sortPriority") },
-            { value: "startDate", label: tList("sortStartDate") },
-            { value: "dueDate", label: tList("sortDueDate") },
-        ],
-        [tList],
-    );
+    const sortOptions: { value: SortBy; label: string }[] = [
+        { value: "default", label: tList("sortDefault") },
+        { value: "status", label: tList("sortStatus") },
+        { value: "priority", label: tList("sortPriority") },
+        { value: "startDate", label: tList("sortStartDate") },
+        { value: "dueDate", label: tList("sortDueDate") },
+    ];
 
     // 필터/정렬 적용된 전체 top-task 목록
-    const displayedTopTasks = useMemo(() => {
-        let tasks = applySortAndFilter(
-            allEnrichedTasks,
-            filterStatusName,
-            filterPriorityName,
-            sortBy,
-            sortLocale,
-        );
-        if (filterMemberId) {
-            tasks = tasks.filter((t) => t._workspaceOwner.id === filterMemberId);
-        }
-        return tasks;
-    }, [allEnrichedTasks, filterStatusName, filterPriorityName, sortBy, filterMemberId, sortLocale]);
-
-    // 팀원별 섹션: 워크스페이스 소유자(workspace.user) 기준으로 그룹핑
-    const byMemberSections = useMemo(() => {
-        const participantMap = new Map(participants.map((p) => [p.id, p]));
-
-        return projectTasksData
-            .map(({ workspace, tasks: rawTasks, statuses, priorities }) => {
-                // 이 워크스페이스의 enriched tasks 중 필터/정렬 적용된 것만
-                const enriched: EnrichedTask[] = rawTasks.map((t) => ({
-                    ...t,
-                    _workspaceId: workspace.id,
-                    _workspaceOwner: workspace.user,
-                    _statuses: statuses,
-                    _priorities: priorities,
-                }));
-                const filtered = applySortAndFilter(
-                    enriched,
-                    filterStatusName,
-                    filterPriorityName,
-                    sortBy,
-                    sortLocale,
-                );
-
-                const participant = participantMap.get(workspace.user.id);
-                const displayName =
-                    (participant?.name ?? workspace.user.name?.trim()) ||
-                    workspace.user.email.split("@")[0];
-
-                return {
-                    key: workspace.id,
-                    userId: workspace.user.id,
-                    name: displayName,
-                    avatarUrl: workspace.user.avatarUrl,
-                    role: participant?.role,
-                    tasks: filtered,
-                    totalCount: rawTasks.filter((t) => !t.parentId).length,
-                };
-            })
-            .filter((s) => {
-                if (filterMemberId && s.userId !== filterMemberId) return false;
-                return s.tasks.length > 0 || s.totalCount > 0;
-            });
-    }, [
-        projectTasksData,
-        participants,
+    let displayedTopTasks = applySortAndFilter(
+        allEnrichedTasks,
         filterStatusName,
         filterPriorityName,
         sortBy,
-        filterMemberId,
         sortLocale,
-    ]);
+    );
+    if (filterMemberId) {
+        displayedTopTasks = displayedTopTasks.filter((t) => t._workspaceOwner.id === filterMemberId);
+    }
+
+    // 팀원별 섹션: 워크스페이스 소유자(workspace.user) 기준으로 그룹핑
+    const participantMap = new Map(participants.map((p) => [p.id, p]));
+    const byMemberSections = projectTasksData
+        .map(({ workspace, tasks: rawTasks, statuses, priorities }) => {
+            const enriched: EnrichedTask[] = rawTasks.map((t) => ({
+                ...t,
+                _workspaceId: workspace.id,
+                _workspaceOwner: workspace.user,
+                _statuses: statuses,
+                _priorities: priorities,
+            }));
+            const filtered = applySortAndFilter(
+                enriched,
+                filterStatusName,
+                filterPriorityName,
+                sortBy,
+                sortLocale,
+            );
+
+            const participant = participantMap.get(workspace.user.id);
+            const displayName =
+                (participant?.name ?? workspace.user.name?.trim()) ||
+                workspace.user.email.split("@")[0];
+
+            return {
+                key: workspace.id,
+                userId: workspace.user.id,
+                name: displayName,
+                avatarUrl: workspace.user.avatarUrl,
+                role: participant?.role,
+                tasks: filtered,
+                totalCount: rawTasks.filter((t) => !t.parentId).length,
+            };
+        })
+        .filter((s) => {
+            if (filterMemberId && s.userId !== filterMemberId) return false;
+            return s.tasks.length > 0 || s.totalCount > 0;
+        });
 
     function handleOpenPanel(task: EnrichedTask) {
         setSelectedTask({

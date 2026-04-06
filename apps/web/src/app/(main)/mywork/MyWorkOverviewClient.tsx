@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 
 import { updateWorkspaceTaskAction } from "@/app/actions/workspaces";
@@ -504,10 +504,7 @@ function TimelineView({
     tMywork: (key: string, values?: Record<string, number>) => string;
 }) {
     const groups = groupByDeadline(tasks, [], groupLabels);
-    const completedTasks = useMemo(
-        () => (showCompleted ? completedTopTasksForView(tasks) : []),
-        [tasks, showCompleted],
-    );
+    const completedTasks = showCompleted ? completedTopTasksForView(tasks) : [];
 
     const hasIncompleteGroups = groups.length > 0;
     const hasCompletedList = completedTasks.length > 0;
@@ -656,17 +653,14 @@ export function MyWorkOverviewClient({
 }) {
     const tm = useTranslations("mywork");
     const tw = useTranslations("workspace");
-    const groupLabels = useMemo<TimelineGroupLabels>(
-        () => ({
-            overdue: tw("timeline.overdue"),
-            today: tw("timeline.today"),
-            soon: tw("timeline.soon"),
-            week: tw("timeline.thisWeek"),
-            later: tw("timeline.later"),
-            nodate: tw("timeline.dateNone"),
-        }),
-        [tw],
-    );
+    const groupLabels: TimelineGroupLabels = {
+        overdue: tw("timeline.overdue"),
+        today: tw("timeline.today"),
+        soon: tw("timeline.soon"),
+        week: tw("timeline.thisWeek"),
+        later: tw("timeline.later"),
+        nodate: tw("timeline.dateNone"),
+    };
 
     const [viewMode, setViewMode] = useState<ViewMode>("combined");
     const [showCompleted, setShowCompleted] = useState(false);
@@ -693,21 +687,18 @@ export function MyWorkOverviewClient({
     }
 
     // 모든 워크스페이스의 task에 컨텍스트 정보 부착
-    const allEnrichedTasks = useMemo<EnrichedTask[]>(
-        () =>
-            workspaceData.flatMap(({ workspace, tasks, statuses, priorities }) =>
-                tasks.map((t) => ({
-                    ...t,
-                    _workspaceId: workspace.id,
-                    _workspaceName: workspace.project.name,
-                    _statuses: statuses,
-                    _priorities: priorities,
-                })),
-            ),
-        [workspaceData],
+    const allEnrichedTasks: EnrichedTask[] = workspaceData.flatMap(
+        ({ workspace, tasks, statuses, priorities }) =>
+            tasks.map((t) => ({
+                ...t,
+                _workspaceId: workspace.id,
+                _workspaceName: workspace.project.name,
+                _statuses: statuses,
+                _priorities: priorities,
+            })),
     );
 
-    const stats = useMemo(() => computeStats(workspaceData), [workspaceData]);
+    const stats = computeStats(workspaceData);
 
     const hasAnyTask = allEnrichedTasks.length > 0;
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 
@@ -89,10 +89,10 @@ export function MainLayoutClient({
     const [notifPanelOpen, setNotifPanelOpen] = useState(false);
 
     /** 알림 패널을 여는 모든 경로에서 호출 — 브라우저는 클릭 등 제스처가 있을 때만 알림 권한 프롬프트를 허용하는 경우가 많음 */
-    const openNotificationPanel = useCallback(() => {
+    function openNotificationPanel() {
         void requestDesktopNotificationPermission();
         setNotifPanelOpen(true);
-    }, []);
+    }
 
     return (
         <NotificationContext.Provider

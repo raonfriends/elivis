@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import type { TeamCommunityPostsActions } from "../../types/team-community-posts-actions";
@@ -59,25 +59,25 @@ export function TeamCommunityTab({
     const PAGE_SIZE = 10;
     const [page, setPage] = useState(1);
 
-    const loadPosts = useCallback(
-        async (category: PostCategoryFilterId) => {
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
             setLoading(true);
             const res = await listTeamPostsAction(teamId, {
-                category: category === "all" ? undefined : category,
+                category: activeCategory === "all" ? undefined : activeCategory,
                 take: 100,
             });
+            if (cancelled) return;
             if (res.ok) {
                 setPosts(res.posts);
             }
             setLoading(false);
-        },
-        [listTeamPostsAction, teamId],
-    );
-
-    useEffect(() => {
-        void loadPosts(activeCategory);
+        })();
         setPage(1);
-    }, [loadPosts, activeCategory]);
+        return () => {
+            cancelled = true;
+        };
+    }, [listTeamPostsAction, teamId, activeCategory]);
 
     async function handleSelectPost(post: ApiTeamPost) {
         setSelectedPost({ ...post, comments: [] });

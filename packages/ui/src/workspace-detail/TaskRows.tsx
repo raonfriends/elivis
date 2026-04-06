@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, HTMLAttributes, Ref } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -63,7 +63,7 @@ const TaskRow = ({
 
     const isTop = depth === 0;
     const indentPx = depth * 20;
-    const sortedSubTasks = useMemo(() => [...subTasks].sort(sortTasksByOrder), [subTasks]);
+    const sortedSubTasks = [...subTasks].sort(sortTasksByOrder);
     const hasChildren = sortedSubTasks.length > 0;
 
     function updateField(input: Parameters<WorkspaceDetailMyWorkMutations["updateWorkspaceTask"]>[2]) {
@@ -95,22 +95,22 @@ const TaskRow = ({
     } | null>(null);
 
     // 상태 CRUD 어댑터
-    const statusCreateAdapter = useCallback(async (wsId: string, input: { name: string; color: string }) => {
+    async function statusCreateAdapter(wsId: string, input: { name: string; color: string }) {
         const res = await myWorkMutations.createWorkspaceStatus(wsId, {
             ...input,
             semantic: "IN_PROGRESS",
         });
         if (res.ok) return { ok: true as const, item: res.status as TagItem };
         return { ok: false as const, message: res.message };
-    }, [myWorkMutations]);
-    const statusUpdateAdapter = useCallback(async (wsId: string, id: string, input: { name?: string; color?: string }) => {
+    }
+    async function statusUpdateAdapter(wsId: string, id: string, input: { name?: string; color?: string }) {
         const res = await myWorkMutations.updateWorkspaceStatus(wsId, id, input);
         if (res.ok) return { ok: true as const, item: res.status as TagItem };
         return { ok: false as const, message: res.message };
-    }, [myWorkMutations]);
-    const statusDeleteAdapter = useCallback(async (wsId: string, id: string) => {
+    }
+    async function statusDeleteAdapter(wsId: string, id: string) {
         return myWorkMutations.deleteWorkspaceStatus(wsId, id);
-    }, [myWorkMutations]);
+    }
 
     // 상태 모달 저장 핸들러
     async function handleStatusModalSave(value: StatusModalValue) {

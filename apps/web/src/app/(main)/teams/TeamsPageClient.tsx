@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useLocale, useTranslations } from "next-intl";
@@ -310,11 +310,7 @@ export function TeamsPageClient({
         setPinDraftIds(myTeams.map((t) => t.id));
     }, [pinModalOpen, myTeams]);
 
-    const pinTeamsById = useMemo(() => {
-        const m = new Map<string, TeamListItem>();
-        for (const t of myTeams) m.set(t.id, t);
-        return m;
-    }, [myTeams]);
+    const pinTeamsById = new Map(myTeams.map((t) => [t.id, t] as const));
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),

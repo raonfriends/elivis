@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { UserAvatar } from "../../UserAvatar";
@@ -117,10 +117,7 @@ export function ProjectPerformanceTab({
     const [taskPanel, setTaskPanel] = useState<PerformanceTaskPanelSelection | null>(null);
     const allTasks = projectTasksData.flatMap((item) => item.tasks);
 
-    const taskPanelLookup = useMemo(
-        () => buildTaskPanelLookup(projectTasksData),
-        [projectTasksData],
-    );
+    const taskPanelLookup = buildTaskPanelLookup(projectTasksData);
 
     function openPerformanceTaskDetail(task: ApiWorkspaceTask) {
         const row = taskPanelLookup.get(task.id);
@@ -142,37 +139,34 @@ export function ProjectPerformanceTab({
         });
         return () => window.cancelAnimationFrame(id);
     }, [detail]);
-    const statusById = useMemo(
-        () => new Map(projectTasksData.flatMap((item) => item.statuses).map((s) => [s.id, s])),
-        [projectTasksData],
+    const statusById = new Map(
+        projectTasksData.flatMap((item) => item.statuses).map((s) => [s.id, s]),
     );
 
-    const today = useMemo(() => {
+    const today = (() => {
         const d = new Date();
         d.setHours(0, 0, 0, 0);
         return d;
-    }, []);
+    })();
 
-    const memberWorkloadRows = useMemo(() => {
-        return project.participants.map((p) => {
-            const assigned = allTasks.filter((task) => task.assignee?.id === p.id);
-            const wtasks = assigned.map((task) => workloadTaskFromProjectTask(task, statusById));
-            const { total } = calculateWorkloadScore(wtasks, today);
-            const band = getWorkloadBand(total);
-            return { participant: p, score: total, band };
-        });
-    }, [project.participants, allTasks, today, statusById]);
+    const memberWorkloadRows = project.participants.map((p) => {
+        const assigned = allTasks.filter((task) => task.assignee?.id === p.id);
+        const wtasks = assigned.map((task) => workloadTaskFromProjectTask(task, statusById));
+        const { total } = calculateWorkloadScore(wtasks, today);
+        const band = getWorkloadBand(total);
+        return { participant: p, score: total, band };
+    });
 
-    const unassignedWorkload = useMemo(() => {
+    const unassignedWorkload = (() => {
         const unassigned = allTasks.filter((task) => !task.assignee?.id);
         const wtasks = unassigned.map((task) => workloadTaskFromProjectTask(task, statusById));
         return {
             ...calculateWorkloadScore(wtasks, today),
             count: unassigned.length,
         };
-    }, [allTasks, today, statusById]);
+    })();
 
-    const chartRows = useMemo((): ChartRow[] => {
+    const chartRows: ChartRow[] = (() => {
         const list: ChartRow[] = memberWorkloadRows.map((r) => ({
             key: r.participant.id,
             kind: "member",
@@ -190,9 +184,9 @@ export function ProjectPerformanceTab({
         }
         list.sort((a, b) => b.score - a.score);
         return list;
-    }, [memberWorkloadRows, unassignedWorkload]);
+    })();
 
-    const detailPayload = useMemo(() => {
+    const detailPayload = (() => {
         if (!detail) return null;
         if (detail.kind === "unassigned") {
             return {
@@ -210,7 +204,7 @@ export function ProjectPerformanceTab({
             score: row.score,
             band: row.band,
         };
-    }, [detail, allTasks, memberWorkloadRows, unassignedWorkload]);
+    })();
 
     const diagnosisKey = (band: WorkloadBand) =>
         band === "relaxed"

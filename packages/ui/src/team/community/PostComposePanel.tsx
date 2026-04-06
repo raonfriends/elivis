@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -94,37 +94,34 @@ export function PostComposePanel({
 
     const currentFontSize = editor?.getAttributes("textStyle").fontSize ?? "";
 
-    const uploadFiles = useCallback(
-        async (files: File[], insertAsImage = false) => {
-            if (files.length === 0) return;
-            setUploading(true);
-            try {
-                for (const file of files) {
-                    const res = await uploadTeamPostFile(file);
-                    if (res.ok) {
-                        if (insertAsImage && res.isImage) {
-                            editor?.chain().focus().setImage({ src: res.url, alt: res.name }).run();
-                        } else {
-                            setAttachments((prev) => [
-                                ...prev,
-                                {
-                                    localId: `${Date.now()}-${res.name}`,
-                                    url: res.url,
-                                    name: res.name,
-                                    mimeType: res.mimeType,
-                                    size: res.size,
-                                    isImage: res.isImage,
-                                },
-                            ]);
-                        }
+    async function uploadFiles(files: File[], insertAsImage = false) {
+        if (files.length === 0) return;
+        setUploading(true);
+        try {
+            for (const file of files) {
+                const res = await uploadTeamPostFile(file);
+                if (res.ok) {
+                    if (insertAsImage && res.isImage) {
+                        editor?.chain().focus().setImage({ src: res.url, alt: res.name }).run();
+                    } else {
+                        setAttachments((prev) => [
+                            ...prev,
+                            {
+                                localId: `${Date.now()}-${res.name}`,
+                                url: res.url,
+                                name: res.name,
+                                mimeType: res.mimeType,
+                                size: res.size,
+                                isImage: res.isImage,
+                            },
+                        ]);
                     }
                 }
-            } finally {
-                setUploading(false);
             }
-        },
-        [editor, uploadTeamPostFile],
-    );
+        } finally {
+            setUploading(false);
+        }
+    }
 
     async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>, insertAsImage = false) {
         const files = Array.from(e.target.files ?? []);

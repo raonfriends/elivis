@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 
@@ -66,7 +66,7 @@ export function TeamIntroLayoutSettingsPanel({
     const [panelTab, setPanelTab] = useState<PanelTab>("templates");
     const [pending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
-    const activeTemplateId = useMemo(() => findMatchingTemplateId(layout), [layout]);
+    const activeTemplateId = findMatchingTemplateId(layout);
 
     useEffect(() => {
         setMounted(true);

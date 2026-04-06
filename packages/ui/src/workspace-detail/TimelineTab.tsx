@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 
 import type { ApiWorkspaceStatus, ApiWorkspaceTask } from "../types/workspace-api";
@@ -67,16 +66,13 @@ export function TimelineTab({
     todayRaw.setHours(0, 0, 0, 0);
     const today = todayRaw.getTime();
 
-    const statusById = useMemo(() => new Map(statuses.map((s) => [s.id, s])), [statuses]);
+    const statusById = new Map(statuses.map((s) => [s.id, s]));
 
     const topTasks = tasks.filter((t) => !t.parentId && !taskIsSemanticDone(t, statusById));
 
-    const completedTopTasks = useMemo(() => {
-        const map = new Map(statuses.map((s) => [s.id, s]));
-        return tasks
-            .filter((task) => !task.parentId && taskIsSemanticDone(task, map))
-            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
-    }, [tasks, statuses]);
+    const completedTopTasks = tasks
+        .filter((task) => !task.parentId && taskIsSemanticDone(task, statusById))
+        .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 
     function diffDays(t: ApiWorkspaceTask) {
         if (!t.dueDate) return null;

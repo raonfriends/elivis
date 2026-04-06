@@ -1,7 +1,7 @@
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 
 import { addProjectFavoriteAction, removeProjectFavoriteAction } from "@/app/actions/projects";
@@ -61,35 +61,25 @@ export function ProjectDetailPageClient({
     const [project, setProject] = useState<Project>(initialProject);
     const [membersModalOpen, setMembersModalOpen] = useState(false);
 
-    const mainTabs = useMemo(
-        () =>
-            [
-                { id: "overview" as const, label: tp("tabs.overview") },
-                { id: "list" as const, label: tp("tabs.list") },
-                { id: "calendar" as const, label: tp("tabs.calendar") },
-                { id: "wiki" as const, label: tp("tabs.wiki") },
-                { id: "performance" as const, label: tp("tabs.performance") },
-                { id: "settings" as const, label: tp("tabs.settings") },
-            ] satisfies { id: ProjectTab; label: string }[],
-        [tp],
-    );
+    const mainTabs = [
+        { id: "overview" as const, label: tp("tabs.overview") },
+        { id: "list" as const, label: tp("tabs.list") },
+        { id: "calendar" as const, label: tp("tabs.calendar") },
+        { id: "wiki" as const, label: tp("tabs.wiki") },
+        { id: "performance" as const, label: tp("tabs.performance") },
+        { id: "settings" as const, label: tp("tabs.settings") },
+    ] satisfies { id: ProjectTab; label: string }[];
 
-    const visibleTabs = useMemo(() => {
-        if (project.projectType === "team" && project.viewerRole !== "LEADER") {
-            return mainTabs.filter((t) => t.id !== "performance" && t.id !== "settings");
-        }
-        return mainTabs;
-    }, [project, mainTabs]);
+    const visibleTabs =
+        project.projectType === "team" && project.viewerRole !== "LEADER"
+            ? mainTabs.filter((t) => t.id !== "performance" && t.id !== "settings")
+            : mainTabs;
 
-    const settingsSubTabs = useMemo(
-        () =>
-            (["project", "security"] as const).map((sid) => ({
-                id: sid,
-                label: tp(`settingsSub.${sid}`),
-                icon: PROJECT_SETTINGS_ICONS[sid],
-            })),
-        [tp],
-    );
+    const settingsSubTabs = (["project", "security"] as const).map((sid) => ({
+        id: sid,
+        label: tp(`settingsSub.${sid}`),
+        icon: PROJECT_SETTINGS_ICONS[sid],
+    }));
 
     useEffect(() => {
         if (project.projectType === "team" && project.viewerRole !== "LEADER") {

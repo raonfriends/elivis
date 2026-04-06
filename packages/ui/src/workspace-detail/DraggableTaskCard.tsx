@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
@@ -53,19 +53,19 @@ export function DraggableTaskCard({
     } | null>(null);
 
     // 상태 어댑터
-    const statusCreateAdapter = useCallback(async (wsId: string, input: { name: string; color: string }) => {
+    async function statusCreateAdapter(wsId: string, input: { name: string; color: string }) {
         const res = await myWorkMutations.createWorkspaceStatus(wsId, {
             ...input,
             semantic: "IN_PROGRESS",
         });
         if (res.ok) return { ok: true as const, item: res.status as TagItem };
         return { ok: false as const, message: res.message };
-    }, [myWorkMutations]);
-    const statusUpdateAdapter = useCallback(async (wsId: string, id: string, input: { name?: string; color?: string }) => {
+    }
+    async function statusUpdateAdapter(wsId: string, id: string, input: { name?: string; color?: string }) {
         const res = await myWorkMutations.updateWorkspaceStatus(wsId, id, input);
         if (res.ok) return { ok: true as const, item: res.status as TagItem };
         return { ok: false as const, message: res.message };
-    }, [myWorkMutations]);
+    }
 
     async function handleStatusModalSave(value: StatusModalValue) {
         if (statusModal?.mode === "create") {

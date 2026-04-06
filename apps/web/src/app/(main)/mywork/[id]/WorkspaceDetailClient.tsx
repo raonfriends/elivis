@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
@@ -61,30 +61,24 @@ export default function WorkspaceDetailClient({
     const [calendarPanelTask, setCalendarPanelTask] = useState<ApiWorkspaceTask | null>(null);
     const [summaryPanelTask, setSummaryPanelTask] = useState<ApiWorkspaceTask | null>(null);
 
-    const myWorkMutations = useMemo(
-        () => ({
-            createWorkspaceStatus: createWorkspaceStatusAction,
-            updateWorkspaceStatus: updateWorkspaceStatusAction,
-            deleteWorkspaceStatus: deleteWorkspaceStatusAction,
-            createWorkspacePriority: createWorkspacePriorityAction,
-            updateWorkspacePriority: updateWorkspacePriorityAction,
-            deleteWorkspacePriority: deleteWorkspacePriorityAction,
-            reorderWorkspaceTasks: reorderWorkspaceTasksAction,
-            createWorkspaceTask: createWorkspaceTaskAction,
-            updateWorkspaceTask: updateWorkspaceTaskAction,
-            deleteWorkspaceTask: deleteWorkspaceTaskAction,
-        }),
-        [],
-    );
+    const myWorkMutations = {
+        createWorkspaceStatus: createWorkspaceStatusAction,
+        updateWorkspaceStatus: updateWorkspaceStatusAction,
+        deleteWorkspaceStatus: deleteWorkspaceStatusAction,
+        createWorkspacePriority: createWorkspacePriorityAction,
+        updateWorkspacePriority: updateWorkspacePriorityAction,
+        deleteWorkspacePriority: deleteWorkspacePriorityAction,
+        reorderWorkspaceTasks: reorderWorkspaceTasksAction,
+        createWorkspaceTask: createWorkspaceTaskAction,
+        updateWorkspaceTask: updateWorkspaceTaskAction,
+        deleteWorkspaceTask: deleteWorkspaceTaskAction,
+    };
 
-    const taskRequests = useMemo(
-        () => ({
-            listTaskRequests: listTaskRequestsAction,
-            acceptTaskRequest: acceptTaskRequestAction,
-            rejectTaskRequest: rejectTaskRequestAction,
-        }),
-        [],
-    );
+    const taskRequests = {
+        listTaskRequests: listTaskRequestsAction,
+        acceptTaskRequest: acceptTaskRequestAction,
+        rejectTaskRequest: rejectTaskRequestAction,
+    };
 
     useEffect(() => {
         setTasks(initialTasks);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import type { NotificationItem } from "../hooks/useNotifications";
 import { getNotificationDeepLink } from "../utils/notification-links";
@@ -52,16 +52,16 @@ export function NotificationToastStack({ items, onDismiss }: Props) {
 export function useNotificationToastQueue() {
     const [items, setItems] = useState<ToastEntry[]>([]);
 
-    const push = useCallback((notification: NotificationItem) => {
+    function push(notification: NotificationItem) {
         setItems((prev) => {
             const next = [{ key: `${notification.id}-${Date.now()}`, notification }, ...prev];
             return next.slice(0, MAX_STACK);
         });
-    }, []);
+    }
 
-    const dismiss = useCallback((key: string) => {
+    function dismiss(key: string) {
         setItems((prev) => prev.filter((t) => t.key !== key));
-    }, []);
+    }
 
     return { items, push, dismiss };
 }

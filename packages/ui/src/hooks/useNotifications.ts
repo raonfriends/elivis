@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -162,17 +162,17 @@ export function useNotifications(accessToken: string | null, options?: UseNotifi
     };
   }, [accessToken]);
 
-  const markAsRead = useCallback((notificationId: string) => {
+  function markAsRead(notificationId: string) {
     socketRef.current?.emit("notification:read", notificationId);
-  }, []);
+  }
 
-  const markAllAsRead = useCallback(() => {
+  function markAllAsRead() {
     socketRef.current?.emit("notification:read_all");
-  }, []);
+  }
 
-  const loadMore = useCallback((page: number) => {
+  function loadMore(page: number) {
     socketRef.current?.emit("notification:get_list", page);
-  }, []);
+  }
 
   return {
     notifications,

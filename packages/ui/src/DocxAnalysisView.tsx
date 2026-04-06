@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { DocxManager } from "@repo/docs";
 
 import { extractDocumentXmlFromDocx } from "./utils/extract-docx-xml";
@@ -31,30 +31,33 @@ export function DocxAnalysisView({
 
   const data = docxManager.getDocxData();
 
-  const loadRawXml = useCallback(async () => {
-    if (!file) {
-      setRawXmlError("Raw XML을 보려면 업로드된 파일이 필요합니다.");
-      setRawXml(null);
-      return;
-    }
-    setRawXmlLoading(true);
-    setRawXmlError(null);
-    try {
-      const xml = await extractDocumentXmlFromDocx(file);
-      setRawXml(formatXml(xml));
-    } catch (e) {
-      setRawXmlError(e instanceof Error ? e.message : "XML 추출 실패");
-      setRawXml(null);
-    } finally {
-      setRawXmlLoading(false);
-    }
-  }, [file]);
-
   useEffect(() => {
-    if (activeTab === "rawXml") {
-      loadRawXml();
-    }
-  }, [activeTab, loadRawXml]);
+    if (activeTab !== "rawXml") return;
+    let cancelled = false;
+    (async () => {
+      if (!file) {
+        setRawXmlError("Raw XML을 보려면 업로드된 파일이 필요합니다.");
+        setRawXml(null);
+        return;
+      }
+      setRawXmlLoading(true);
+      setRawXmlError(null);
+      try {
+        const xml = await extractDocumentXmlFromDocx(file);
+        if (!cancelled) setRawXml(formatXml(xml));
+      } catch (e) {
+        if (!cancelled) {
+          setRawXmlError(e instanceof Error ? e.message : "XML 추출 실패");
+          setRawXml(null);
+        }
+      } finally {
+        if (!cancelled) setRawXmlLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, file]);
 
   const fileName = data?.metadata?.fileName ?? "—";
   const parsedAt = data?.metadata?.parsedAt;

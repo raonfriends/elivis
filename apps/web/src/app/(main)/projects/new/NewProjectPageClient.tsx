@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -78,7 +78,7 @@ export function NewProjectPageClient({ currentUser }: { currentUser: UserProfile
     const t = useTranslations("projects.new");
     const router = useRouter();
     const searchParams = useSearchParams();
-    const presetTeamIds = useMemo(() => parsePresetTeamIds(searchParams), [searchParams]);
+    const presetTeamIds = parsePresetTeamIds(searchParams);
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [projectType, setProjectType] = useState<"personal" | "team">("personal");

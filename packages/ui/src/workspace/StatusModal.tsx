@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { TAG_COLORS, COLOR_KEYS } from "../utils/tag-colors";
@@ -51,16 +51,13 @@ export function StatusModal({ mode, initialValue, onSave, onClose }: StatusModal
     const [mounted, setMounted] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    const semanticLabels = useMemo(
-        () => ({
-            WAITING: t("statusModal.semantic.WAITING"),
-            REVIEW: t("statusModal.semantic.REVIEW"),
-            IN_PROGRESS: t("statusModal.semantic.IN_PROGRESS"),
-            ON_HOLD: t("statusModal.semantic.ON_HOLD"),
-            DONE: t("statusModal.semantic.DONE"),
-        }),
-        [t],
-    );
+    const semanticLabels = {
+        WAITING: t("statusModal.semantic.WAITING"),
+        REVIEW: t("statusModal.semantic.REVIEW"),
+        IN_PROGRESS: t("statusModal.semantic.IN_PROGRESS"),
+        ON_HOLD: t("statusModal.semantic.ON_HOLD"),
+        DONE: t("statusModal.semantic.DONE"),
+    };
 
     useEffect(() => {
         setMounted(true);

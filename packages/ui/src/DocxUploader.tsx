@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useRef, useState } from "react";
 import { DocxParser } from "@repo/docs";
 import type { DocxContent } from "@repo/docs";
 
@@ -73,9 +73,13 @@ export function DocxUploader({ onParsed }: DocxUploaderProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isParsing, setIsParsing] = useState(false);
-  const parser = useMemo(() => new DocxParser(), []);
+  const parserRef = useRef<DocxParser | null>(null);
+  if (parserRef.current === null) {
+    parserRef.current = new DocxParser();
+  }
+  const parser = parserRef.current;
 
-  const validateAndSetFile = useCallback((file: File | null) => {
+  function validateAndSetFile(file: File | null) {
     if (!file) {
       setSelectedFile(null);
       return;
@@ -85,45 +89,39 @@ export function DocxUploader({ onParsed }: DocxUploaderProps) {
       return;
     }
     setSelectedFile(file);
-  }, []);
+  }
 
-  const handleFileInputChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0] ?? null;
-      validateAndSetFile(file);
-      e.target.value = "";
-    },
-    [validateAndSetFile]
-  );
+  function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0] ?? null;
+    validateAndSetFile(file);
+    e.target.value = "";
+  }
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>) => {
-      e.preventDefault();
-      setIsDragging(false);
-      const file = e.dataTransfer.files?.[0];
-      if (!file) return;
-      validateAndSetFile(file);
-    },
-    [validateAndSetFile]
-  );
+  function handleDrop(e: React.DragEvent<HTMLDivElement>) {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    validateAndSetFile(file);
+  }
 
-  const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  function handleDragOver(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(true);
-  }, []);
+  }
 
-  const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
+  function handleDragLeave(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-  }, []);
+  }
 
-  const handleRemoveFile = useCallback(() => {
+  function handleRemoveFile() {
     setSelectedFile(null);
-  }, []);
+  }
 
-  const handleAnalyze = useCallback(async () => {
+  async function handleAnalyze() {
     if (!selectedFile) return;
     setIsParsing(true);
     try {
@@ -143,11 +141,11 @@ export function DocxUploader({ onParsed }: DocxUploaderProps) {
     } finally {
       setIsParsing(false);
     }
-  }, [selectedFile, parser, onParsed]);
+  }
 
-  const handleDropZoneClick = useCallback(() => {
+  function handleDropZoneClick() {
     document.getElementById("docx-file-input")?.click();
-  }, []);
+  }
 
   return (
     <div className="flex w-full max-w-3xl flex-col gap-6">

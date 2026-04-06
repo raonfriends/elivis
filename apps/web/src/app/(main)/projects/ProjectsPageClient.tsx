@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 import type { ProjectListItem } from "@/lib/server/projects.server";
@@ -155,10 +155,8 @@ export function ProjectsPageClient({
 
     const totalPages = Math.max(1, Math.ceil(myProjects.length / MY_PAGE_SIZE));
     const safePage = Math.min(currentPage, totalPages);
-    const pageList = useMemo(() => {
-        const start = (safePage - 1) * MY_PAGE_SIZE;
-        return myProjects.slice(start, start + MY_PAGE_SIZE);
-    }, [myProjects, safePage]);
+    const pageStart = (safePage - 1) * MY_PAGE_SIZE;
+    const pageList = myProjects.slice(pageStart, pageStart + MY_PAGE_SIZE);
 
     const bothEmpty =
         myProjects.length === 0 &&

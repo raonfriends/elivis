@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState } from "react";
 import { useLocale, useTranslations } from "next-intl";
 import type {
     ApiProjectTasksItem,
@@ -273,52 +273,46 @@ export default function ProjectCalendarTab({
     const tCal = useTranslations("projects.detail.calendar");
     const localeTag = calendarLocaleTag(locale);
 
-    const dowLabels = useMemo(
-        () =>
-            Array.from({ length: 7 }, (_, i) =>
-                new Date(2024, 0, 7 + i).toLocaleDateString(localeTag, { weekday: "short" }),
-            ),
-        [localeTag],
+    const dowLabels = Array.from({ length: 7 }, (_, i) =>
+        new Date(2024, 0, 7 + i).toLocaleDateString(localeTag, { weekday: "short" }),
     );
 
     // 멤버별 색상 매핑 (고정)
-    const memberColors = useMemo<Record<string, string>>(() => {
-        const map: Record<string, string> = {};
-        projectTasksData.forEach((item, idx) => {
-            map[item.workspace.user.id] = MEMBER_COLORS[idx % MEMBER_COLORS.length];
-        });
-        return map;
-    }, [projectTasksData]);
+    const memberColors: Record<string, string> = {};
+    projectTasksData.forEach((item, idx) => {
+        memberColors[item.workspace.user.id] = MEMBER_COLORS[idx % MEMBER_COLORS.length];
+    });
 
     // 워크스페이스 소유자 목록 (중복 제거)
-    const members = useMemo<WorkspaceOwner[]>(() => {
+    const members: WorkspaceOwner[] = (() => {
         const seen = new Set<string>();
         return projectTasksData
-            .map(item => item.workspace.user)
-            .filter(u => { if (seen.has(u.id)) return false; seen.add(u.id); return true; });
-    }, [projectTasksData]);
+            .map((item) => item.workspace.user)
+            .filter((u) => {
+                if (seen.has(u.id)) return false;
+                seen.add(u.id);
+                return true;
+            });
+    })();
 
     // 전체 업무 평탄화 + 소유자 정보 주입
-    const allTasks = useMemo<EnrichedTask[]>(() => {
-        return projectTasksData.flatMap(item =>
-            item.tasks.map(task => ({
-                ...task,
-                _workspaceId: item.workspace.id,
-                _owner: item.workspace.user,
-                _statuses: item.statuses,
-                _priorities: item.priorities,
-                _ownerColor: memberColors[item.workspace.user.id] ?? "bg-stone-500",
-            }))
-        );
-    }, [projectTasksData, memberColors]);
+    const allTasks: EnrichedTask[] = projectTasksData.flatMap((item) =>
+        item.tasks.map((task) => ({
+            ...task,
+            _workspaceId: item.workspace.id,
+            _owner: item.workspace.user,
+            _statuses: item.statuses,
+            _priorities: item.priorities,
+            _ownerColor: memberColors[item.workspace.user.id] ?? "bg-stone-500",
+        })),
+    );
 
     // 멤버 필터
     const [filterMemberId, setFilterMemberId] = useState<string | null>(null);
 
-    const filteredTasks = useMemo<EnrichedTask[]>(() => {
-        if (!filterMemberId) return allTasks;
-        return allTasks.filter(t => t._owner.id === filterMemberId);
-    }, [allTasks, filterMemberId]);
+    const filteredTasks: EnrichedTask[] = !filterMemberId
+        ? allTasks
+        : allTasks.filter((t) => t._owner.id === filterMemberId);
 
     // 선택된 업무 (TaskDetailPanel용)
     const [selectedTask, setSelectedTask] = useState<EnrichedTask | null>(null);
@@ -328,15 +322,18 @@ export default function ProjectCalendarTab({
     }
 
     // 캘린더 네비게이션
-    const today = useMemo(() => startOfDay(new Date()), []);
-    const [viewDate, setViewDate] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
+    const today = startOfDay(new Date());
+    const [viewDate, setViewDate] = useState(() => {
+        const t = startOfDay(new Date());
+        return new Date(t.getFullYear(), t.getMonth(), 1);
+    });
 
-    const year  = viewDate.getFullYear();
+    const year = viewDate.getFullYear();
     const month = viewDate.getMonth();
-    const monthYearLabel = useMemo(
-        () => new Intl.DateTimeFormat(localeTag, { year: "numeric", month: "long" }).format(viewDate),
-        [viewDate, localeTag],
-    );
+    const monthYearLabel = new Intl.DateTimeFormat(localeTag, {
+        year: "numeric",
+        month: "long",
+    }).format(viewDate);
     const weeks = getCalendarWeeks(year, month);
     const events = filteredTasks.map(getEventRange).filter(Boolean) as CalendarEvent[];
 
