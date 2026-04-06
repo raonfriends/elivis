@@ -10,9 +10,15 @@ import { TeamIntroEditModal } from "./TeamIntroEditModal";
 import { TeamIntroPageContent, type TeamIntroPageContentHandle } from "./TeamIntroPageContent";
 import { TeamIntroBannerBlock } from "./TeamIntroBannerBlock";
 import { TeamCommunityTab } from "./TeamCommunityTab";
-import { delegateTeamLeaderAction, deleteTeamAction, removeTeamMemberAction, updateTeamFieldsAction } from "@/app/actions/teams";
-import { UserAvatar } from "@/components/UserAvatar";
-import { TeamFavoriteButton } from "@/components/TeamFavoriteButton";
+import {
+    addTeamFavoriteAction,
+    delegateTeamLeaderAction,
+    deleteTeamAction,
+    removeTeamFavoriteAction,
+    removeTeamMemberAction,
+    updateTeamFieldsAction,
+} from "@/app/actions/teams";
+import { TeamFavoriteButton, UserAvatar } from "@repo/ui";
 import type { TeamDetail, TeamMemberRow } from "@/lib/teams.server";
 
 type TeamTab = "intro" | "projects" | "members" | "community" | "settings";
@@ -73,7 +79,13 @@ function TeamPublicDetail({ team, isFavorite }: { team: TeamDetail; isFavorite: 
                             <h1 className="truncate text-lg font-semibold text-stone-800 sm:text-xl">
                                 {team.name}
                             </h1>
-                            <TeamFavoriteButton teamId={team.id} initialIsFavorite={isFavorite} size="sm" />
+                            <TeamFavoriteButton
+                                teamId={team.id}
+                                initialIsFavorite={isFavorite}
+                                size="sm"
+                                onAdd={() => addTeamFavoriteAction(team.id)}
+                                onRemove={() => removeTeamFavoriteAction(team.id)}
+                            />
                         </div>
                         <p className="truncate text-xs text-stone-500 sm:text-sm">
                             {team.shortDescription?.trim() || t("public.shortDescriptionFallback")}
@@ -633,7 +645,13 @@ export function TeamDetailPageClient({
                             <h1 className="truncate text-lg font-semibold text-stone-800 sm:text-xl">
                                 {team.name}
                             </h1>
-                            <TeamFavoriteButton teamId={team.id} initialIsFavorite={isFavorite} size="sm" />
+                            <TeamFavoriteButton
+                                teamId={team.id}
+                                initialIsFavorite={isFavorite}
+                                size="sm"
+                                onAdd={() => addTeamFavoriteAction(team.id)}
+                                onRemove={() => removeTeamFavoriteAction(team.id)}
+                            />
                         </div>
                         <p className="truncate text-xs text-stone-500 sm:text-sm">
                             {team.shortDescription?.trim() || t("header.shortDescriptionFallback")}

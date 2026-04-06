@@ -1,20 +1,23 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { addProjectFavoriteAction, removeProjectFavoriteAction } from "@/app/actions/projects";
 
 interface ProjectFavoriteButtonProps {
     projectId: string;
     initialIsFavorite: boolean;
     size?: "sm" | "md";
     onToggle?: (isFavorite: boolean) => void;
+    onAdd: () => Promise<{ ok: boolean; message?: string }>;
+    onRemove: () => Promise<{ ok: boolean; message?: string }>;
 }
 
 export function ProjectFavoriteButton({
-    projectId,
+    projectId: _projectId,
     initialIsFavorite,
     size = "md",
     onToggle,
+    onAdd,
+    onRemove,
 }: ProjectFavoriteButtonProps) {
     const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
     const [isPending, startTransition] = useTransition();
@@ -28,24 +31,26 @@ export function ProjectFavoriteButton({
         e.stopPropagation();
         setErrorMsg(null);
 
-        startTransition(async () => {
-            if (isFavorite) {
-                const res = await removeProjectFavoriteAction(projectId);
-                if (res.ok) {
-                    setIsFavorite(false);
-                    onToggle?.(false);
+        startTransition(() => {
+            void (async () => {
+                if (isFavorite) {
+                    const res = await onRemove();
+                    if (res.ok) {
+                        setIsFavorite(false);
+                        onToggle?.(false);
+                    } else {
+                        setErrorMsg(res.message ?? "오류가 발생했습니다.");
+                    }
                 } else {
-                    setErrorMsg(res.message ?? "오류가 발생했습니다.");
+                    const res = await onAdd();
+                    if (res.ok) {
+                        setIsFavorite(true);
+                        onToggle?.(true);
+                    } else {
+                        setErrorMsg(res.message ?? "오류가 발생했습니다.");
+                    }
                 }
-            } else {
-                const res = await addProjectFavoriteAction(projectId);
-                if (res.ok) {
-                    setIsFavorite(true);
-                    onToggle?.(true);
-                } else {
-                    setErrorMsg(res.message ?? "오류가 발생했습니다.");
-                }
-            }
+            })();
         });
     }
 

@@ -4,11 +4,11 @@ import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 
-import { AdminHeader } from "@/components/AdminHeader";
-import { AdminSidebar, type AdminSidebarSize } from "@/components/AdminSidebar";
-import { TopLoadingBar } from "@/components/TopLoadingBar";
+import { logoutAction } from "@/app/actions/auth";
+import { setLanguageAction } from "@/app/actions/language";
+import { updateStatusAction } from "@/app/actions/users";
 import type { UserProfile } from "@/lib/users";
-import { UserStatusProvider } from "@/context/UserStatusContext";
+import { AdminHeader, AdminSidebar, TopLoadingBar, UserStatusProvider, type AdminSidebarSize } from "@repo/ui";
 
 interface AdminLayoutClientProps {
     children: React.ReactNode;
@@ -47,6 +47,12 @@ export function AdminLayoutClient({ children, user }: AdminLayoutClientProps) {
                         onMenuClick={() => setSidebarOpen((o) => !o)}
                         title={title}
                         user={user}
+                        logoutAction={logoutAction}
+                        persistUserStatus={async (s) => {
+                            const r = await updateStatusAction(s);
+                            return { ok: r.ok };
+                        }}
+                        onSelectLocale={(locale) => void setLanguageAction(locale)}
                     />
                     <main className="relative z-0 min-h-0 flex-1 overflow-auto">{children}</main>
                 </div>

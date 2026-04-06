@@ -1,6 +1,6 @@
 "use client";
 
-import { MarkdownContent } from "@/components/MarkdownContent";
+import { MarkdownContent } from "@repo/ui";
 import type { TeamDetail } from "@/lib/teams.server";
 import type { IntroBlockType } from "@/lib/team-intro-layout";
 import { useTranslations } from "next-intl";

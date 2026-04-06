@@ -37,7 +37,7 @@ import {
     deleteTeamPostCommentAction,
     uploadTeamPostFileAction,
 } from "@/app/actions/teamPosts";
-import { UserAvatar } from "@/components/UserAvatar";
+import { UserAvatar } from "@repo/ui";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 상수

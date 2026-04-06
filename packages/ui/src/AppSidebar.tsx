@@ -4,11 +4,15 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { workspaceDisplayName, type ApiWorkspaceListItem } from "@/lib/map-api-workspace";
-import { WorkspaceSidebarLabelModal } from "@/components/WorkspaceSidebarLabelModal";
-import type { ApiTeamFavoriteItem } from "@/lib/map-api-team";
-import type { ApiProjectFavoriteItem } from "@/lib/map-api-project";
-import { useNotificationContext } from "@/context/NotificationContext";
+
+import { useNotificationContext } from "./context/NotificationContext";
+import type {
+    SidebarProjectFavoriteItem,
+    SidebarTeamFavoriteItem,
+    SidebarWorkspaceListItem,
+} from "./types/app-sidebar";
+import { workspaceDisplayName } from "./utils/workspace-display-name";
+import { WorkspaceSidebarLabelModal } from "./WorkspaceSidebarLabelModal";
 
 export type SidebarSize = "expanded" | "collapsed" | "hidden";
 
@@ -51,13 +55,17 @@ interface AppSidebarProps {
   size: SidebarSize;
   onSizeChange: (s: SidebarSize) => void;
   isSuperAdmin?: boolean;
-  workspaces?: ApiWorkspaceListItem[];
+  workspaces?: SidebarWorkspaceListItem[];
   /** @deprecated Context에서 직접 읽음. 하위 호환용으로만 유지 */
   unreadNotificationCount?: number;
   /** 팀 즐겨찾기 목록 */
-  teamFavorites?: ApiTeamFavoriteItem[];
+  teamFavorites?: SidebarTeamFavoriteItem[];
   /** 프로젝트 즐겨찾기 목록 */
-  projectFavorites?: ApiProjectFavoriteItem[];
+  projectFavorites?: SidebarProjectFavoriteItem[];
+  saveWorkspaceSidebarLabel: (
+    workspaceId: string,
+    label: string | null,
+  ) => Promise<{ ok: boolean; message?: string }>;
 }
 
 
@@ -70,13 +78,14 @@ export function AppSidebar({
   workspaces = [],
   teamFavorites = [],
   projectFavorites = [],
+  saveWorkspaceSidebarLabel,
 }: AppSidebarProps) {
   const pathname = usePathname();
   const router = useRouter();
   const tNav = useTranslations("nav");
   const tSidebar = useTranslations("sidebar");
   const [workspaceExpanded, setWorkspaceExpanded] = useState(true);
-  const [renameWorkspace, setRenameWorkspace] = useState<ApiWorkspaceListItem | null>(null);
+  const [renameWorkspace, setRenameWorkspace] = useState<SidebarWorkspaceListItem | null>(null);
   const showLabels = size === "expanded";
   const showFloatingRestore = size === "hidden";
 
@@ -526,6 +535,7 @@ export function AppSidebar({
       <WorkspaceSidebarLabelModal
         workspace={renameWorkspace}
         onClose={() => setRenameWorkspace(null)}
+        onSave={saveWorkspaceSidebarLabel}
         onSaved={() => router.refresh()}
       />
     </>

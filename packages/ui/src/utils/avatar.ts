@@ -1,8 +1,4 @@
-"use client";
-
-import { useState } from "react";
-
-import { getApiBaseUrl } from "@/lib/api";
+import { getApiBaseUrl } from "./api-base-url";
 
 const AVATAR_PLACEHOLDER_COLORS = [
     "#78716c",
@@ -45,41 +41,4 @@ export function toAvatarSrc(url: string | null | undefined): string | null {
         return path;
     }
     return `${getApiBaseUrl().replace(/\/$/, "")}${path}`;
-}
-
-export function UserAvatar({
-    userId,
-    label,
-    avatarUrl,
-    sizeClass,
-    ringClass = "ring-2 ring-white",
-}: {
-    userId: string;
-    label: string;
-    avatarUrl: string | null | undefined;
-    sizeClass: string;
-    ringClass?: string;
-}) {
-    const [imgError, setImgError] = useState(false);
-    const src = toAvatarSrc(avatarUrl);
-    const showImg = Boolean(src && !imgError);
-
-    return (
-        <div
-            className={`${sizeClass} shrink-0 rounded-full ${ringClass} flex items-center justify-center font-semibold text-white shadow-sm overflow-hidden`}
-            style={!showImg ? { backgroundColor: getAvatarColor(userId) } : undefined}
-            title={label}
-        >
-            {showImg ? (
-                <img
-                    src={src!}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    onError={() => setImgError(true)}
-                />
-            ) : (
-                getInitials(label)
-            )}
-        </div>
-    );
 }

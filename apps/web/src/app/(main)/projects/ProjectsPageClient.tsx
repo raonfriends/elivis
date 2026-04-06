@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import type { ProjectListItem } from "@/lib/projects.server";
-import { ProjectFavoriteButton } from "@/components/ProjectFavoriteButton";
+import { addProjectFavoriteAction, removeProjectFavoriteAction } from "@/app/actions/projects";
+import { ProjectFavoriteButton } from "@repo/ui";
 
 const MY_PAGE_SIZE = 10;
 
@@ -66,7 +67,13 @@ function ProjectCard({
                         >
                             {project.name || "이름 없음"}
                         </h3>
-                        <ProjectFavoriteButton projectId={project.id} initialIsFavorite={isFavorite} size="md" />
+                        <ProjectFavoriteButton
+                            projectId={project.id}
+                            initialIsFavorite={isFavorite}
+                            size="md"
+                            onAdd={() => addProjectFavoriteAction(project.id)}
+                            onRemove={() => removeProjectFavoriteAction(project.id)}
+                        />
                         {isPersonal ? (
                             <span className="shrink-0 rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[11px] font-medium text-sky-600">
                                 개인 프로젝트

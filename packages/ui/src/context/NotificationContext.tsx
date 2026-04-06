@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext } from "react";
-import type { NotificationItem } from "@/hooks/useNotifications";
+import type { NotificationItem } from "../hooks/useNotifications";
 
 interface NotificationContextValue {
     notifications: NotificationItem[];

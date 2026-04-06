@@ -3,10 +3,9 @@
 import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
 
-import { MarkdownContent } from "@/components/MarkdownContent";
-import { UserAvatar } from "@/components/UserAvatar";
-import { ProjectFavoriteButton } from "@/components/ProjectFavoriteButton";
+import { addProjectFavoriteAction, removeProjectFavoriteAction } from "@/app/actions/projects";
 import { getProject, type Project, type ProjectUser, type ProjectViewerRole } from "@/lib/projects";
+import { MarkdownContent, ProjectFavoriteButton, UserAvatar } from "@repo/ui";
 import { formatTaskTitleForList } from "@/lib/task-title-display";
 
 import { ProjectSettingsProjectTab, ProjectSettingsSecurityTab } from "./ProjectSettingsPanels";
@@ -450,6 +449,8 @@ export function ProjectDetailPageClient({
                                     projectId={project.id}
                                     initialIsFavorite={isFavorite}
                                     size="sm"
+                                    onAdd={() => addProjectFavoriteAction(project.id)}
+                                    onRemove={() => removeProjectFavoriteAction(project.id)}
                                 />
                             )}
                         </div>

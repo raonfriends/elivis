@@ -2,17 +2,19 @@
 
 import { useEffect, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
-import { NotificationTypeIcon } from "@repo/ui";
-
-import { useNotificationContext } from "@/context/NotificationContext";
 import {
-  fetchNotificationsAction,
-  markNotificationReadAction,
-  markAllNotificationsReadAction,
-  type ApiNotification,
+    NotificationTypeIcon,
+    useNotificationContext,
+    useNotificationCopy,
+    type NotificationItem,
+} from "@repo/ui";
+
+import {
+    fetchNotificationsAction,
+    markNotificationReadAction,
+    markAllNotificationsReadAction,
+    type ApiNotification,
 } from "@/app/actions/notifications";
-import type { NotificationItem } from "@/hooks/useNotifications";
-import { useNotificationCopy } from "@/hooks/useNotificationCopy";
 
 function fromApiNotification(n: ApiNotification): NotificationItem {
   return {

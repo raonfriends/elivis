@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { DocxManager } from "@repo/docs";
-import JSZip from "jszip";
+
+import { extractDocumentXmlFromDocx } from "./utils/extract-docx-xml";
+import { formatXml } from "./utils/xml-format";
 
 type TabId = "inspector" | "rawXml";
 
@@ -14,48 +16,6 @@ interface DocxAnalysisViewProps {
   status?: string;
   /** 다시 업로드(초기 화면으로) */
   onReset?: () => void;
-}
-
-/** XML 문자열을 들여쓰기하여 가독성 있게 포맷 */
-function formatXml(xml: string): string {
-  const trimmed = xml.trim();
-  if (!trimmed) return trimmed;
-
-  // '><' 사이에 줄바꿈 삽입 후 라인 단위로 처리
-  const lines = trimmed
-    .replace(/>\s*</g, ">\n<")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
-
-  let depth = 0;
-  const indent = "  ";
-  const result: string[] = [];
-
-  for (const line of lines) {
-    const isClosing = line.startsWith("</");
-    const isSelfClosing = line.endsWith("/>");
-
-    if (isClosing) {
-      depth = Math.max(0, depth - 1);
-    }
-
-    result.push(indent.repeat(depth) + line);
-
-    if (!isClosing && !isSelfClosing && line.startsWith("<")) {
-      depth++;
-    }
-  }
-
-  return result.join("\n");
-}
-
-async function extractDocumentXml(file: File): Promise<string> {
-  const arrayBuffer = await file.arrayBuffer();
-  const zip = await JSZip.loadAsync(arrayBuffer);
-  const entry = zip.file("word/document.xml");
-  if (!entry) throw new Error("word/document.xml을 찾을 수 없습니다.");
-  return entry.async("string");
 }
 
 export function DocxAnalysisView({
@@ -80,7 +40,7 @@ export function DocxAnalysisView({
     setRawXmlLoading(true);
     setRawXmlError(null);
     try {
-      const xml = await extractDocumentXml(file);
+      const xml = await extractDocumentXmlFromDocx(file);
       setRawXml(formatXml(xml));
     } catch (e) {
       setRawXmlError(e instanceof Error ? e.message : "XML 추출 실패");

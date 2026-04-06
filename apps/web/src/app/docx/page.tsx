@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { DocxManager } from "@repo/docs";
-import { DocxUploader } from "../../../components/DocxUploader";
-import { DocxAnalysisView } from "../../../components/DocxAnalysisView";
+import { DocxAnalysisView, DocxUploader } from "@repo/ui";
 import type { DocxContent } from "@repo/docs";
 
 export default function DocxPage() {

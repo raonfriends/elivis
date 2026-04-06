@@ -4,17 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import { DocxParser } from "@repo/docs";
 import type { DocxContent } from "@repo/docs";
 
-const DOCX_EXT = ".docx";
-
-function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function isDocxFile(file: File): boolean {
-  return file.name.toLowerCase().endsWith(DOCX_EXT);
-}
+import { formatFileSize, isDocxFile } from "./utils/docx";
 
 /** Heroicons-style: Cloud Arrow Up (업로드) */
 function CloudUploadIcon({ className }: { className?: string }) {

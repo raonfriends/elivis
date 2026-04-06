@@ -1,22 +1,23 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { addTeamFavoriteAction, removeTeamFavoriteAction } from "@/app/actions/teams";
 
 interface TeamFavoriteButtonProps {
     teamId: string;
     initialIsFavorite: boolean;
-    /** 버튼 크기 variant */
     size?: "sm" | "md";
-    /** 즐겨찾기 변경 후 콜백 */
     onToggle?: (isFavorite: boolean) => void;
+    onAdd: () => Promise<{ ok: boolean; message?: string }>;
+    onRemove: () => Promise<{ ok: boolean; message?: string }>;
 }
 
 export function TeamFavoriteButton({
-    teamId,
+    teamId: _teamId,
     initialIsFavorite,
     size = "md",
     onToggle,
+    onAdd,
+    onRemove,
 }: TeamFavoriteButtonProps) {
     const [isFavorite, setIsFavorite] = useState(initialIsFavorite);
     const [isPending, startTransition] = useTransition();
@@ -30,24 +31,26 @@ export function TeamFavoriteButton({
         e.stopPropagation();
         setErrorMsg(null);
 
-        startTransition(async () => {
-            if (isFavorite) {
-                const res = await removeTeamFavoriteAction(teamId);
-                if (res.ok) {
-                    setIsFavorite(false);
-                    onToggle?.(false);
+        startTransition(() => {
+            void (async () => {
+                if (isFavorite) {
+                    const res = await onRemove();
+                    if (res.ok) {
+                        setIsFavorite(false);
+                        onToggle?.(false);
+                    } else {
+                        setErrorMsg(res.message ?? "오류가 발생했습니다.");
+                    }
                 } else {
-                    setErrorMsg(res.message ?? "오류가 발생했습니다.");
+                    const res = await onAdd();
+                    if (res.ok) {
+                        setIsFavorite(true);
+                        onToggle?.(true);
+                    } else {
+                        setErrorMsg(res.message ?? "오류가 발생했습니다.");
+                    }
                 }
-            } else {
-                const res = await addTeamFavoriteAction(teamId);
-                if (res.ok) {
-                    setIsFavorite(true);
-                    onToggle?.(true);
-                } else {
-                    setErrorMsg(res.message ?? "오류가 발생했습니다.");
-                }
-            }
+            })();
         });
     }
 
@@ -79,7 +82,6 @@ export function TeamFavoriteButton({
                     />
                 </svg>
             </button>
-            {/* 에러 툴팁 */}
             {errorMsg && (
                 <span className="pointer-events-none absolute -top-8 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded bg-stone-800 px-2 py-1 text-xs text-white shadow">
                     {errorMsg}

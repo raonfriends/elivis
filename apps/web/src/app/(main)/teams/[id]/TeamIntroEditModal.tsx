@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { updateTeamFieldsAction } from "@/app/actions/teams";
-import { MarkdownContent } from "@/components/MarkdownContent";
+import { MarkdownContent } from "@repo/ui";
 import { TeamIntroRichEditor } from "./TeamIntroRichEditor";
 
 type EditorMode = "markdown" | "rich";

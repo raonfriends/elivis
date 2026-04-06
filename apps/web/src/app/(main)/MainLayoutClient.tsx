@@ -4,18 +4,26 @@ import { useCallback, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 
-import { AppHeader } from "@/components/AppHeader";
-import { AppSidebar } from "@/components/AppSidebar";
-import { TopLoadingBar } from "@/components/TopLoadingBar";
-import { NotificationPanel } from "@/components/notifications/NotificationPanel";
-import { NotificationToastStack, useNotificationToastQueue } from "@/components/notifications/NotificationToast";
-import { requestDesktopNotificationPermission, useNotifications } from "@/hooks/useNotifications";
-import type { UserProfile } from "@/lib/users";
-import type { ApiWorkspaceListItem } from "@/lib/map-api-workspace";
-import type { ApiTeamFavoriteItem } from "@/lib/map-api-team";
+import { logoutAction } from "@/app/actions/auth";
+import { setLanguageAction } from "@/app/actions/language";
+import { updateStatusAction } from "@/app/actions/users";
+import { updateWorkspaceSidebarLabelAction } from "@/app/actions/workspaces";
 import type { ApiProjectFavoriteItem } from "@/lib/map-api-project";
-import { UserStatusProvider } from "@/context/UserStatusContext";
-import { NotificationContext } from "@/context/NotificationContext";
+import type { ApiTeamFavoriteItem } from "@/lib/map-api-team";
+import type { ApiWorkspaceListItem } from "@/lib/map-api-workspace";
+import type { UserProfile } from "@/lib/users";
+import {
+    AppHeader,
+    AppSidebar,
+    NotificationContext,
+    NotificationPanel,
+    NotificationToastStack,
+    requestDesktopNotificationPermission,
+    TopLoadingBar,
+    useNotificationToastQueue,
+    useNotifications,
+    UserStatusProvider,
+} from "@repo/ui";
 
 function getPageTitle(pathname: string | null, tNav: (key: string) => string): string {
   if (!pathname) return tNav("myWork");
@@ -103,9 +111,20 @@ export function MainLayoutClient({
             workspaces={workspaces}
             teamFavorites={teamFavorites}
             projectFavorites={projectFavorites}
+            saveWorkspaceSidebarLabel={updateWorkspaceSidebarLabelAction}
           />
           <div className="flex min-w-0 flex-1 flex-col">
-            <AppHeader onMenuClick={() => setSidebarOpen((o) => !o)} title={title} user={user} />
+            <AppHeader
+              onMenuClick={() => setSidebarOpen((o) => !o)}
+              title={title}
+              user={user}
+              logoutAction={logoutAction}
+              persistUserStatus={async (s) => {
+                const r = await updateStatusAction(s);
+                return { ok: r.ok };
+              }}
+              onSelectLocale={(locale) => void setLanguageAction(locale)}
+            />
             <main className="relative z-0 min-h-0 flex-1 overflow-auto">{children}</main>
           </div>
 

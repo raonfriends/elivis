@@ -4,19 +4,23 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 
-import { updateWorkspaceSidebarLabelAction } from "@/app/actions/workspaces";
-import type { ApiWorkspaceListItem } from "@/lib/map-api-workspace";
+import type { WorkspaceSidebarLabelTarget } from "./types/workspace-sidebar-label";
 
 interface WorkspaceSidebarLabelModalProps {
-    workspace: ApiWorkspaceListItem | null;
+    workspace: WorkspaceSidebarLabelTarget | null;
     onClose: () => void;
-    onSaved: () => void;
+    onSaved?: () => void;
+    onSave: (
+        workspaceId: string,
+        label: string | null,
+    ) => Promise<{ ok: boolean; message?: string }>;
 }
 
 export function WorkspaceSidebarLabelModal({
     workspace,
     onClose,
     onSaved,
+    onSave,
 }: WorkspaceSidebarLabelModalProps) {
     const t = useTranslations("sidebar");
     const [label, setLabel] = useState("");
@@ -55,14 +59,15 @@ export function WorkspaceSidebarLabelModal({
         const workspaceId = workspace.id;
         const trimmed = label.trim();
         const payload = trimmed.length === 0 ? null : trimmed;
-        startTransition(async () => {
-            const res = await updateWorkspaceSidebarLabelAction(workspaceId, payload);
-            if (!res.ok) {
-                setError(res.message);
-                return;
-            }
-            onSaved();
-            onClose();
+        startTransition(() => {
+            void onSave(workspaceId, payload).then((res) => {
+                if (!res.ok) {
+                    setError(res.message ?? "");
+                    return;
+                }
+                onSaved?.();
+                onClose();
+            });
         });
     }
 

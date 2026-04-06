@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { NotificationItem } from "@/hooks/useNotifications";
-import { getNotificationDeepLink } from "@/lib/notification-links";
-import { NotificationTypeIcon } from "@repo/ui";
+import type { NotificationItem } from "../hooks/useNotifications";
+import { getNotificationDeepLink } from "../utils/notification-links";
+import { NotificationTypeIcon } from "../NotificationTypeIcon";
 
 const TOAST_MS = 5200;
 const MAX_STACK = 4;

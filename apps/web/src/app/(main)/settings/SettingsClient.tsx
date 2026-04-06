@@ -5,13 +5,14 @@ import { useTranslations } from "next-intl";
 
 import { getApiBaseUrl } from "@/lib/api";
 import type { UserProfile } from "@/lib/user-types";
-import { StatusDropdown } from "@/components/StatusDropdown";
 import {
     deleteAvatarAction,
     updateProfileAction,
+    updateStatusAction,
     uploadAvatarAction,
     type UpdateProfileState,
 } from "@/app/actions/users";
+import { StatusDropdown } from "@repo/ui";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 타입
@@ -412,7 +413,14 @@ export function SettingsClient({ user }: SettingsClientProps) {
                                 : t("profile.roleUser")}
                         </span>
                         {/* 상태 배지 — 클릭하면 드롭다운으로 변경 가능 */}
-                        {user?.status && <StatusDropdown />}
+                        {user?.status && (
+                            <StatusDropdown
+                                persistStatus={async (s) => {
+                                    const r = await updateStatusAction(s);
+                                    return { ok: r.ok };
+                                }}
+                            />
+                        )}
                     </div>
                 </div>
             </div>

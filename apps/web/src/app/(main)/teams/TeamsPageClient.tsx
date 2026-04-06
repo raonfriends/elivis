@@ -9,7 +9,8 @@ import { getApiBaseUrl } from "@/lib/api";
 import type { TeamListItem } from "@/lib/teams.server";
 import { fetchMorePublicTeamsAction } from "@/app/actions/teams";
 import { updateMyTeamPinsAction } from "@/app/actions/teams";
-import { TeamFavoriteButton } from "@/components/TeamFavoriteButton";
+import { addTeamFavoriteAction, removeTeamFavoriteAction } from "@/app/actions/teams";
+import { TeamFavoriteButton } from "@repo/ui";
 
 import {
     DndContext,
@@ -101,7 +102,13 @@ function TeamListCard({
                         >
                             {team.name || "—"}
                         </h3>
-                        <TeamFavoriteButton teamId={team.id} initialIsFavorite={isFavorite} size="md" />
+                        <TeamFavoriteButton
+                            teamId={team.id}
+                            initialIsFavorite={isFavorite}
+                            size="md"
+                            onAdd={() => addTeamFavoriteAction(team.id)}
+                            onRemove={() => removeTeamFavoriteAction(team.id)}
+                        />
                         {team.hiddenFromUsers ? (
                             <span className="shrink-0 rounded-md border border-stone-200 bg-stone-50 px-2 py-0.5 text-[11px] font-medium text-stone-600">
                                 비공개

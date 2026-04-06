@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useLocale } from "next-intl";
 
-import { setLanguageAction } from "@/app/actions/language";
 import type { Locale } from "@repo/i18n";
 
 const LANG_OPTIONS: { value: Locale; label: string; flag: string }[] = [
@@ -21,9 +20,15 @@ interface LanguageSelectorProps {
     variant?: "header" | "login" | "full";
     /** 드롭다운이 열리는 방향 */
     align?: "left" | "right";
+    /** 선택한 로케일 적용(서버 액션 등) */
+    onSelectLocale: (locale: Locale) => void | Promise<void>;
 }
 
-export function LanguageSelector({ variant = "header", align = "right" }: LanguageSelectorProps) {
+export function LanguageSelector({
+    variant = "header",
+    align = "right",
+    onSelectLocale,
+}: LanguageSelectorProps) {
     const locale = useLocale() as Locale;
     const [open, setOpen] = useState(false);
     const [, startTransition] = useTransition();
@@ -45,11 +50,10 @@ export function LanguageSelector({ variant = "header", align = "right" }: Langua
     function handleSelect(value: Locale) {
         setOpen(false);
         startTransition(() => {
-            void setLanguageAction(value);
+            void onSelectLocale(value);
         });
     }
 
-    // ── 헤더용 ──────────────────────────────────────────────────────────────────
     if (variant === "header") {
         return (
             <div ref={ref} className="relative">
@@ -118,7 +122,6 @@ export function LanguageSelector({ variant = "header", align = "right" }: Langua
         );
     }
 
-    // ── full-width (카드 상단용) ─────────────────────────────────────────────────
     if (variant === "full") {
         return (
             <div ref={ref} className="relative w-full">
@@ -185,7 +188,6 @@ export function LanguageSelector({ variant = "header", align = "right" }: Langua
         );
     }
 
-    // ── 로그인 화면용 ────────────────────────────────────────────────────────────
     return (
         <div ref={ref} className="relative">
             <button

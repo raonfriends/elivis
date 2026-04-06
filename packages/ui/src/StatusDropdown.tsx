@@ -3,25 +3,18 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 
-import type { UserStatus } from "@/lib/user-types";
-import { updateStatusAction } from "@/app/actions/users";
-import { useUserStatus } from "@/context/UserStatusContext";
-
-export const STATUS_STYLE: Record<UserStatus, { dot: string; badge: string }> = {
-    WORKING: { dot: "bg-green-400", badge: "bg-green-50  text-green-700" },
-    VACATION: { dot: "bg-blue-400", badge: "bg-blue-50   text-blue-700" },
-    OFF_WORK: { dot: "bg-stone-400", badge: "bg-stone-100 text-stone-500" },
-    DEEP_FOCUS: { dot: "bg-red-400", badge: "bg-red-50    text-red-700" },
-};
-
-const STATUS_ORDER: UserStatus[] = ["WORKING", "VACATION", "OFF_WORK", "DEEP_FOCUS"];
+import { useUserStatus } from "./context/UserStatusContext";
+import type { UserStatus } from "./types/user-status";
+import { STATUS_ORDER, STATUS_STYLE } from "./utils/status-styles";
 
 interface StatusDropdownProps {
-    /** 드롭다운 패널 정렬 방향 */
     align?: "left" | "right";
+    persistStatus: (status: UserStatus) => Promise<{ ok: boolean }>;
 }
 
-export function StatusDropdown({ align = "left" }: StatusDropdownProps) {
+export { STATUS_STYLE, STATUS_ORDER } from "./utils/status-styles";
+
+export function StatusDropdown({ align = "left", persistStatus }: StatusDropdownProps) {
     const tStatus = useTranslations("domain.userStatus");
     const { status: current, setStatus: setCurrent } = useUserStatus();
     const [open, setOpen] = useState(false);
@@ -45,9 +38,10 @@ export function StatusDropdown({ align = "left" }: StatusDropdownProps) {
         const prev = current;
         setOpen(false);
         setCurrent(status);
-        startTransition(async () => {
-            const result = await updateStatusAction(status);
-            if (!result.ok) setCurrent(prev);
+        startTransition(() => {
+            void persistStatus(status).then((result) => {
+                if (!result.ok) setCurrent(prev);
+            });
         });
     }
 

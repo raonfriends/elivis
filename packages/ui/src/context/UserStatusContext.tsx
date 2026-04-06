@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState } from "react";
 
-import type { UserStatus } from "@/lib/user-types";
+import type { UserStatus } from "../types/user-status";
 
 // ─────────────────────────────────────────────────────────────────────────────
 

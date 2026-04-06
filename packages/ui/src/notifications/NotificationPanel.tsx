@@ -2,12 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { NotificationTypeIcon } from "@repo/ui";
+import { NotificationTypeIcon } from "../NotificationTypeIcon";
 
-import { useNotificationContext } from "@/context/NotificationContext";
-import type { NotificationItem } from "@/hooks/useNotifications";
-import { useNotificationCopy } from "@/hooks/useNotificationCopy";
-import { getNotificationDeepLink } from "@/lib/notification-links";
+import { useNotificationContext } from "../context/NotificationContext";
+import { useNotificationCopy } from "../hooks/useNotificationCopy";
+import type { NotificationItem } from "../hooks/useNotifications";
+import { getNotificationDeepLink } from "../utils/notification-links";
 
 function NotificationDetailView({
     notification,

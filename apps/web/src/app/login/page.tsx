@@ -4,7 +4,8 @@ import { useActionState, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { loginAction } from "@/app/actions/auth";
-import { LanguageSelector } from "@/components/LanguageSelector";
+import { setLanguageAction } from "@/app/actions/language";
+import { LanguageSelector } from "@repo/ui";
 
 const initialState = { error: null };
 const SAVED_EMAIL_KEY = "elivis_saved_email";
@@ -54,7 +55,11 @@ export default function LoginPage() {
                 <div className="rounded-2xl border border-stone-200/80 bg-white shadow-sm shadow-stone-200/50 transition-shadow hover:shadow-md">
                     {/* 언어 선택 — 카드 최상단 full-width */}
                     <div className="border-b border-stone-100 px-5 py-3">
-                        <LanguageSelector variant="full" align="right" />
+                        <LanguageSelector
+                            variant="full"
+                            align="right"
+                            onSelectLocale={(locale) => void setLanguageAction(locale)}
+                        />
                     </div>
 
                     <form action={formAction} onSubmit={handleSubmit} className="space-y-5 p-8">
