@@ -54,7 +54,10 @@ export function DraggableTaskCard({
 
     // 상태 어댑터
     const statusCreateAdapter = useCallback(async (wsId: string, input: { name: string; color: string }) => {
-        const res = await myWorkMutations.createWorkspaceStatus(wsId, input);
+        const res = await myWorkMutations.createWorkspaceStatus(wsId, {
+            ...input,
+            semantic: "IN_PROGRESS",
+        });
         if (res.ok) return { ok: true as const, item: res.status as TagItem };
         return { ok: false as const, message: res.message };
     }, [myWorkMutations]);

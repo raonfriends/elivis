@@ -289,6 +289,7 @@ export function createProjectController(app: FastifyInstance) {
                     name: "할 일",
                     color: "gray",
                     order: 0,
+                    semantic: "WAITING" as const,
                 },
                 {
                     id: generatePublicId(),
@@ -296,6 +297,7 @@ export function createProjectController(app: FastifyInstance) {
                     name: "진행 중",
                     color: "blue",
                     order: 1,
+                    semantic: "IN_PROGRESS" as const,
                 },
                 {
                     id: generatePublicId(),
@@ -303,6 +305,7 @@ export function createProjectController(app: FastifyInstance) {
                     name: "완료",
                     color: "green",
                     order: 2,
+                    semantic: "DONE" as const,
                 },
             ]);
             await (tx as any).workspaceStatus.createMany({
@@ -553,6 +556,7 @@ export function createProjectController(app: FastifyInstance) {
                             name: "할 일",
                             color: "gray",
                             order: 0,
+                            semantic: "WAITING",
                         },
                         {
                             id: generatePublicId(),
@@ -560,6 +564,7 @@ export function createProjectController(app: FastifyInstance) {
                             name: "진행 중",
                             color: "blue",
                             order: 1,
+                            semantic: "IN_PROGRESS",
                         },
                         {
                             id: generatePublicId(),
@@ -567,6 +572,7 @@ export function createProjectController(app: FastifyInstance) {
                             name: "완료",
                             color: "green",
                             order: 2,
+                            semantic: "DONE",
                         },
                     ],
                     skipDuplicates: true,

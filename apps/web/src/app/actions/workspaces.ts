@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import type {
     ApiWorkspacePriority,
     ApiWorkspaceStatus,
+    ApiWorkspaceStatusSemantic,
     ApiWorkspaceTask,
     ApiWorkspaceTaskComment,
     ApiWorkspaceTaskAttachment,
@@ -25,7 +26,12 @@ import {
 
 export async function createWorkspaceStatusAction(
     workspaceId: string,
-    input: { name: string; color?: string; notifyOnChange?: boolean },
+    input: {
+        name: string;
+        color?: string;
+        notifyOnChange?: boolean;
+        semantic: ApiWorkspaceStatusSemantic;
+    },
 ): Promise<{ ok: true; status: ApiWorkspaceStatus } | { ok: false; message: string }> {
     const denied = await requireActionSession();
     if (denied) return denied;
@@ -50,7 +56,12 @@ export async function createWorkspaceStatusAction(
 export async function updateWorkspaceStatusAction(
     workspaceId: string,
     statusId: string,
-    input: { name?: string; color?: string; notifyOnChange?: boolean },
+    input: {
+        name?: string;
+        color?: string;
+        notifyOnChange?: boolean;
+        semantic?: ApiWorkspaceStatusSemantic;
+    },
 ): Promise<{ ok: true; status: ApiWorkspaceStatus } | { ok: false; message: string }> {
     const denied = await requireActionSession();
     if (denied) return denied;

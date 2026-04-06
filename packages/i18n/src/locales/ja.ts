@@ -101,6 +101,8 @@ export const ja = {
       statusDeleted:       "ステータスが削除されました。",
       statusNotFound:      "ステータスが見つかりません。",
       statusNameRequired:  "ステータス名は必須です。",
+      statusSemanticRequired:
+          "ステータスの意味（待機・レビュー・進行・保留・完了）を選択してください。",
       statusAlreadyExists: "同じ名前のステータスが既に存在します。",
       statusMinRequired:   "最低1つのステータスが必要です。",
       tasksFetched:   "タスク一覧を読み込みました。",
@@ -1022,6 +1024,33 @@ export const ja = {
         weightLabel: "重み", weightNote: "（0〜100・高いほど優先）",
         colorLabel: "カラー", preview: "プレビュー", noName: "名前なし",
         addButton: "優先度を追加",
+      },
+      statusModal: {
+        titleCreate: "ステータスを追加",
+        titleEdit: "ステータスを編集",
+        ariaCreate: "ステータスを追加",
+        ariaEdit: "ステータスを編集",
+        closeAria: "閉じる",
+        nameLabel: "ステータス名",
+        namePlaceholder: "例: 進行中、レビュー中、完了…",
+        notifyTitle: "このステータスになったらメンバーに通知",
+        notifyDesc:
+          "タスクがこのステータスに変わったとき、プロジェクトの全メンバーにリアルタイム通知を送ります。",
+        meaningTitle: "このステータスが示す意味",
+        meaningDesc:
+          "表示名は自由に書けますが、集計用の意味は次の5つから1つだけ選んでください。",
+        semantic: {
+          WAITING: "待機",
+          REVIEW: "レビュー中",
+          IN_PROGRESS: "進行中",
+          ON_HOLD: "保留",
+          DONE: "完了",
+        },
+        add: "追加",
+        save: "保存",
+        saving: "保存中…",
+        errNameRequired: "ステータス名を入力してください。",
+        errSemanticRequired: "意味を1つ選んでください。",
       },
       inlineAdd: {
         taskPlaceholder: "タスクタイトルを入力してEnter",

@@ -5,8 +5,17 @@ import { useState, useTransition, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useTranslations } from "next-intl";
 import { COLOR_KEYS, TAG_COLORS, tagColorOf } from "../utils/tag-colors";
+import type { ApiWorkspaceStatusSemantic } from "../types/workspace-api";
 
-export type TagItem = { id: string; name: string; color: string; order: number; value?: number; notifyOnChange?: boolean };
+export type TagItem = {
+    id: string;
+    name: string;
+    color: string;
+    order: number;
+    value?: number;
+    notifyOnChange?: boolean;
+    semantic?: ApiWorkspaceStatusSemantic;
+};
 
 export function TagDropdown({
     selectedId,

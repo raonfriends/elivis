@@ -2,6 +2,7 @@ import type {
     ApiTaskRequest,
     ApiWorkspacePriority,
     ApiWorkspaceStatus,
+    ApiWorkspaceStatusSemantic,
     ApiWorkspaceTask,
 } from "./workspace-api";
 
@@ -9,12 +10,22 @@ import type {
 export interface WorkspaceDetailMyWorkMutations {
     createWorkspaceStatus: (
         workspaceId: string,
-        input: { name: string; color?: string; notifyOnChange?: boolean },
+        input: {
+            name: string;
+            color?: string;
+            notifyOnChange?: boolean;
+            semantic: ApiWorkspaceStatusSemantic;
+        },
     ) => Promise<{ ok: true; status: ApiWorkspaceStatus } | { ok: false; message: string }>;
     updateWorkspaceStatus: (
         workspaceId: string,
         statusId: string,
-        input: { name?: string; color?: string; notifyOnChange?: boolean },
+        input: {
+            name?: string;
+            color?: string;
+            notifyOnChange?: boolean;
+            semantic?: ApiWorkspaceStatusSemantic;
+        },
     ) => Promise<{ ok: true; status: ApiWorkspaceStatus } | { ok: false; message: string }>;
     deleteWorkspaceStatus: (
         workspaceId: string,

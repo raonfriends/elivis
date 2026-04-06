@@ -79,7 +79,7 @@ export async function withStatus(
     const [status, priority] = await Promise.all([
         (app.prisma as any).workspaceStatus.findUnique({
             where: { id: task.statusId },
-            select: { id: true, name: true, color: true, order: true },
+            select: { id: true, name: true, color: true, order: true, semantic: true },
         }),
         task.priorityId
             ? (app.prisma as any).workspacePriority.findUnique({
@@ -90,7 +90,7 @@ export async function withStatus(
     ]);
     return {
         ...task,
-        status: status ?? { id: task.statusId, name: "—", color: "gray", order: 0 },
+        status: status ?? { id: task.statusId, name: "—", color: "gray", order: 0, semantic: "IN_PROGRESS" },
         priority: priority ?? null,
     };
 }
@@ -107,7 +107,7 @@ export async function withStatusMany(
     const [statuses, priorities] = await Promise.all([
         (app.prisma as any).workspaceStatus.findMany({
             where: { id: { in: statusIds } },
-            select: { id: true, name: true, color: true, order: true },
+            select: { id: true, name: true, color: true, order: true, semantic: true },
         }),
         priorityIds.length > 0
             ? (app.prisma as any).workspacePriority.findMany({
@@ -122,7 +122,13 @@ export async function withStatusMany(
 
     return tasks.map((task) => ({
         ...task,
-        status: statusMap.get(task.statusId) ?? { id: task.statusId, name: "—", color: "gray", order: 0 },
+        status: statusMap.get(task.statusId) ?? {
+            id: task.statusId,
+            name: "—",
+            color: "gray",
+            order: 0,
+            semantic: "IN_PROGRESS",
+        },
         priority: task.priorityId ? (priorityMap.get(task.priorityId as string) ?? null) : null,
     }));
 }

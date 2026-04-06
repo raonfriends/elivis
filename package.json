@@ -14,6 +14,8 @@
     "build:desktop": "turbo run build:desktop --filter=@repo/desktop",
     "start": "concurrently -k \"pnpm --filter web start\" \"pnpm --filter @repo/api-server start\" \"pnpm --filter @repo/notification-server start\"",
     "db:deploy": "pnpm --filter @repo/database db:deploy",
+    "db:reset": "pnpm --filter @repo/database db:reset",
+    "db:reset:force": "pnpm --filter @repo/database db:reset:force",
     "db:studio": "pnpm --filter @repo/database db:studio",
     "lint": "turbo lint",
     "type-check": "turbo type-check",

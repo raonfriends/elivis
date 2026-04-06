@@ -102,6 +102,8 @@ export const en = {
       statusDeleted:       "Status has been deleted.",
       statusNotFound:      "Status not found.",
       statusNameRequired:  "Status name is required.",
+      statusSemanticRequired:
+          "Please select a status meaning (waiting, review, in progress, on hold, or done).",
       statusAlreadyExists: "A status with this name already exists.",
       statusMinRequired:   "At least one status is required.",
     },
@@ -1022,6 +1024,33 @@ export const en = {
         weightLabel: "Weight", weightNote: "(0–100 · higher = processed first)",
         colorLabel: "Color", preview: "Preview", noName: "No name",
         addButton: "Add priority",
+      },
+      statusModal: {
+        titleCreate: "Add status",
+        titleEdit: "Edit status",
+        ariaCreate: "Add status",
+        ariaEdit: "Edit status",
+        closeAria: "Close",
+        nameLabel: "Status name",
+        namePlaceholder: "e.g. In progress, In review, Done…",
+        notifyTitle: "Notify teammates when set to this status",
+        notifyDesc:
+          "When a task moves to this status, everyone on the project gets a real-time notification.",
+        meaningTitle: "Assign this meaning when the task is in this status",
+        meaningDesc:
+          "You can name the status freely, but you must pick one of the five meanings below for how it should be counted.",
+        semantic: {
+          WAITING: "Waiting",
+          REVIEW: "In review",
+          IN_PROGRESS: "In progress",
+          ON_HOLD: "On hold",
+          DONE: "Done",
+        },
+        add: "Add",
+        save: "Save",
+        saving: "Saving…",
+        errNameRequired: "Please enter a status name.",
+        errSemanticRequired: "Please select one meaning for this status.",
       },
       inlineAdd: {
         taskPlaceholder: "Enter task title and press Enter",

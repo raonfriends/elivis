@@ -15,8 +15,16 @@ export function statusCssColor(color: string): string {
     return PROJECT_DETAIL_STATUS_COLOR_MAP[color] ?? "#78716c";
 }
 
-/** 완료 상태 판별 (color=green 또는 이름에 "완료"/"done"/"complete" 포함) */
-export function isCompletedStatus(s: { color: string; name: string }): boolean {
+type StatusSemanticInput = {
+    semantic?: string;
+    color: string;
+    name: string;
+};
+
+/** 완료 의미(집계용) — semantic 우선, 없으면 레거시 휴리스틱 */
+export function isCompletedStatus(s: StatusSemanticInput): boolean {
+    if (s.semantic === "DONE") return true;
+    if (s.semantic) return false;
     return (
         s.color === "green" ||
         s.name.includes("완료") ||
@@ -25,8 +33,10 @@ export function isCompletedStatus(s: { color: string; name: string }): boolean {
     );
 }
 
-/** 진행중 상태 판별 */
-export function isInProgressStatus(s: { color: string; name: string }): boolean {
+/** 진행·검토 의미(집계용) — semantic 우선 */
+export function isInProgressStatus(s: StatusSemanticInput): boolean {
+    if (s.semantic === "IN_PROGRESS" || s.semantic === "REVIEW") return true;
+    if (s.semantic) return false;
     return (
         s.color === "blue" || s.name.includes("진행") || s.name.toLowerCase().includes("progress")
     );

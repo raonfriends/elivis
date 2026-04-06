@@ -11,6 +11,14 @@ export type ApiWorkspacePriority = {
     updatedAt: string;
 };
 
+/** Prisma `WorkspaceStatusSemantic` — 집계·분석용 의미 */
+export type ApiWorkspaceStatusSemantic =
+    | "WAITING"
+    | "REVIEW"
+    | "IN_PROGRESS"
+    | "ON_HOLD"
+    | "DONE";
+
 /** 워크스페이스별 커스텀 상태 */
 export type ApiWorkspaceStatus = {
     id: string;
@@ -21,6 +29,8 @@ export type ApiWorkspaceStatus = {
     order: number;
     /** true면 이 상태로 변경 시 프로젝트 팀원 전체에게 알림 발송 */
     notifyOnChange: boolean;
+    /** 표시 이름과 별개인 업무적 의미 */
+    semantic: ApiWorkspaceStatusSemantic;
     createdAt: string;
     updatedAt: string;
 };
@@ -90,7 +100,13 @@ export type ApiWorkspaceTask = {
     title: string;
     description: string | null;
     statusId: string;
-    status: { id: string; name: string; color: string; order: number };
+    status: {
+        id: string;
+        name: string;
+        color: string;
+        order: number;
+        semantic: ApiWorkspaceStatusSemantic;
+    };
     priorityId: string | null;
     priority: { id: string; name: string; color: string; order: number; value: number } | null;
     order: number;

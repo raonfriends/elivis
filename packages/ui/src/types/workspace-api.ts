@@ -11,6 +11,13 @@ export type ApiWorkspacePriority = {
     updatedAt: string;
 };
 
+export type ApiWorkspaceStatusSemantic =
+    | "WAITING"
+    | "REVIEW"
+    | "IN_PROGRESS"
+    | "ON_HOLD"
+    | "DONE";
+
 export type ApiWorkspaceStatus = {
     id: string;
     workspaceId: string;
@@ -18,6 +25,7 @@ export type ApiWorkspaceStatus = {
     color: string;
     order: number;
     notifyOnChange: boolean;
+    semantic: ApiWorkspaceStatusSemantic;
     createdAt: string;
     updatedAt: string;
 };
@@ -34,7 +42,7 @@ export type ApiWorkspaceTask = {
     title: string;
     description: string | null;
     statusId: string;
-    status: { id: string; name: string; color: string; order: number };
+    status: { id: string; name: string; color: string; order: number; semantic: ApiWorkspaceStatusSemantic };
     priorityId: string | null;
     priority: { id: string; name: string; color: string; order: number; value: number } | null;
     order: number;

@@ -62,11 +62,20 @@ export interface CreateWorkspaceTaskNoteBody {
     content: string;
 }
 
+/** Prisma `WorkspaceStatusSemantic`와 동일 문자열 */
+export type WorkspaceStatusSemanticDto =
+    | "WAITING"
+    | "REVIEW"
+    | "IN_PROGRESS"
+    | "ON_HOLD"
+    | "DONE";
+
 export interface CreateWorkspaceStatusBody {
     name: string;
     color?: string;
     order?: number;
     notifyOnChange?: boolean;
+    semantic: WorkspaceStatusSemanticDto;
 }
 
 export interface UpdateWorkspaceStatusBody {
@@ -74,6 +83,7 @@ export interface UpdateWorkspaceStatusBody {
     color?: string;
     order?: number;
     notifyOnChange?: boolean;
+    semantic?: WorkspaceStatusSemanticDto;
 }
 
 export interface WorkspacePriorityParams extends WorkspaceParams {

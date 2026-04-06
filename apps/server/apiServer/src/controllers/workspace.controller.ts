@@ -41,11 +41,20 @@ export type {
     WorkspaceParams,
     WorkspacePriorityParams,
     WorkspaceStatusParams,
+    WorkspaceStatusSemanticDto,
     WorkspaceTaskAttachmentParams,
     WorkspaceTaskCommentParams,
     WorkspaceTaskNoteParams,
     WorkspaceTaskParams,
 } from "./workspace/workspace.dto";
+
+const WORKSPACE_STATUS_SEMANTICS = new Set<string>([
+    "WAITING",
+    "REVIEW",
+    "IN_PROGRESS",
+    "ON_HOLD",
+    "DONE",
+]);
 
 import {
     findAccessibleWorkspace,
@@ -261,11 +270,14 @@ export function createWorkspaceController(app: FastifyInstance) {
     ) {
         const { workspaceId } = request.params;
         const lang = request.lang;
-        const { name, color = "gray", order, notifyOnChange = false } = request.body ?? {};
+        const { name, color = "gray", order, notifyOnChange = false, semantic } = request.body ?? {};
 
         const trimmedName = name?.trim();
         if (!trimmedName) {
             return reply.code(400).send(badRequest(t(lang, MSG.WORKSPACE_STATUS_NAME_REQUIRED)));
+        }
+        if (!semantic || !WORKSPACE_STATUS_SEMANTICS.has(semantic)) {
+            return reply.code(400).send(badRequest(t(lang, MSG.WORKSPACE_STATUS_SEMANTIC_REQUIRED)));
         }
 
         const ws = await findOwnWorkspace(app, workspaceId, request.userId);
@@ -296,6 +308,7 @@ export function createWorkspaceController(app: FastifyInstance) {
                 color,
                 order: resolvedOrder,
                 notifyOnChange,
+                semantic,
             },
         });
 
@@ -306,7 +319,7 @@ export function createWorkspaceController(app: FastifyInstance) {
             resourceType: "WORKSPACE_STATUS",
             resourceId: status.id,
             resourceName: trimmedName,
-            after: { name: trimmedName, color, notifyOnChange },
+            after: { name: trimmedName, color, notifyOnChange, semantic },
         });
 
         return reply.code(201).send(created(status, t(lang, MSG.WORKSPACE_STATUS_CREATED)));
@@ -352,6 +365,12 @@ export function createWorkspaceController(app: FastifyInstance) {
         if (body.color !== undefined) data.color = body.color;
         if (body.order !== undefined) data.order = body.order;
         if (body.notifyOnChange !== undefined) data.notifyOnChange = body.notifyOnChange;
+        if (body.semantic !== undefined) {
+            if (!WORKSPACE_STATUS_SEMANTICS.has(body.semantic)) {
+                return reply.code(400).send(badRequest(t(lang, MSG.WORKSPACE_STATUS_SEMANTIC_REQUIRED)));
+            }
+            data.semantic = body.semantic;
+        }
 
         const updated = await (app.prisma as any).workspaceStatus.update({
             where: { id: statusId },
@@ -369,11 +388,13 @@ export function createWorkspaceController(app: FastifyInstance) {
                 name: existing.name,
                 color: existing.color,
                 notifyOnChange: existing.notifyOnChange,
+                semantic: existing.semantic,
             },
             after: {
                 name: updated.name,
                 color: updated.color,
                 notifyOnChange: updated.notifyOnChange,
+                semantic: updated.semantic,
             },
         });
 
@@ -426,7 +447,7 @@ export function createWorkspaceController(app: FastifyInstance) {
             resourceType: "WORKSPACE_STATUS",
             resourceId: statusId,
             resourceName: existing.name,
-            before: { name: existing.name, color: existing.color },
+            before: { name: existing.name, color: existing.color, semantic: existing.semantic },
         });
 
         return reply.send(ok({ id: statusId }, t(lang, MSG.WORKSPACE_STATUS_DELETED)));

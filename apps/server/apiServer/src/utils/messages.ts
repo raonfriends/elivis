@@ -66,6 +66,7 @@ export const MSG = {
     WORKSPACE_STATUS_DELETED: "server.workspace.statusDeleted",
     WORKSPACE_STATUS_NOT_FOUND: "server.workspace.statusNotFound",
     WORKSPACE_STATUS_NAME_REQUIRED: "server.workspace.statusNameRequired",
+    WORKSPACE_STATUS_SEMANTIC_REQUIRED: "server.workspace.statusSemanticRequired",
     WORKSPACE_STATUS_ALREADY_EXISTS: "server.workspace.statusAlreadyExists",
     WORKSPACE_STATUS_MIN_REQUIRED: "server.workspace.statusMinRequired",
     WORKSPACE_PRIORITY_LIST_FETCHED: "server.workspace.priorityListFetched",

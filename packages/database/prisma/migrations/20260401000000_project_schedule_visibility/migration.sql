@@ -1,5 +1,0 @@
--- AlterTable
-ALTER TABLE "Project" ADD COLUMN     "startDate" TIMESTAMP(3),
-ADD COLUMN "endDate" TIMESTAMP(3),
-ADD COLUMN "noEndDate" BOOLEAN NOT NULL DEFAULT false,
-ADD COLUMN "isPublic" BOOLEAN NOT NULL DEFAULT true;

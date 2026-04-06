@@ -67,6 +67,7 @@ export { formatTaskTitleForList, TASK_TITLE_LIST_MAX_LEN } from "./utils/task-ti
 export type {
     ApiWorkspaceTask,
     ApiWorkspaceStatus,
+    ApiWorkspaceStatusSemantic,
     ApiWorkspacePriority,
     ApiWorkspaceTaskComment,
     ApiWorkspaceTaskNote,
