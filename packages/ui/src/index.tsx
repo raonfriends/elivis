@@ -52,8 +52,89 @@ export type {
 export type { WorkspaceSidebarLabelTarget } from "./types/workspace-sidebar-label";
 
 export { getApiBaseUrl, apiUrl } from "./utils/api-base-url";
+export * from "./utils/team-intro-layout";
+export { htmlToMarkdown, markdownToHtml } from "./utils/team-intro-markdown";
 export { getNotificationDeepLink } from "./utils/notification-links";
 export { workspaceDisplayName } from "./utils/workspace-display-name";
 export { formatFileSize, isDocxFile, DOCX_EXT } from "./utils/docx";
 export { formatXml } from "./utils/xml-format";
 export { extractDocumentXmlFromDocx } from "./utils/extract-docx-xml";
+
+export { TAG_COLORS, COLOR_KEYS, tagColorOf } from "./utils/tag-colors";
+export type { TagColorResult } from "./utils/tag-colors";
+export { formatTaskTitleForList, TASK_TITLE_LIST_MAX_LEN } from "./utils/task-title-display";
+
+export type {
+    ApiWorkspaceTask,
+    ApiWorkspaceStatus,
+    ApiWorkspacePriority,
+    ApiWorkspaceTaskComment,
+    ApiWorkspaceTaskNote,
+    ApiWorkspaceTaskAttachment,
+    ApiTaskUser,
+    ApiProjectTasksItem,
+    ApiTaskRequest,
+    ApiTaskRequestStatus,
+} from "./types/workspace-api";
+export type {
+    WorkspaceDetailMyWorkMutations,
+    WorkspaceTaskRequestsActions,
+} from "./types/workspace-detail-mutations";
+export type { WorkspaceTab, MyWorkView, SortBy, SummarySubTab } from "./workspace-detail/types";
+export { MyWorkTab } from "./workspace-detail/MyWorkTab";
+export { SummaryTab } from "./workspace-detail/SummaryTab";
+export { RequestsTab } from "./workspace-detail/RequestsTab";
+export type { WorkspaceTaskDetailActions } from "./types/workspace-task-detail-actions";
+export type { CreateWorkspaceTaskFn } from "./types/workspace-calendar-actions";
+
+export type {
+    Project,
+    ProjectUser,
+    ProjectViewerRole,
+    ProjectTeam,
+    ProjectType,
+} from "./types/project-ui";
+export type { SearchableUserForProject } from "./types/project-user-search";
+export type { ProjectSettingsActions } from "./types/project-settings-actions";
+export type { CreateProjectTaskRequestFn } from "./types/project-task-request-action";
+
+export type { TeamDetail, TeamMemberRow, TeamProjectRow } from "./types/team-detail";
+export type {
+    ApiTeamPost,
+    ApiTeamPostAttachment,
+    ApiTeamPostAuthor,
+    ApiTeamPostComment,
+} from "./types/team-posts-api";
+export type { TeamCommunityPostsActions } from "./types/team-community-posts-actions";
+export type { SearchableUserForTeamInvite, TeamMemberInviteActions } from "./types/team-member-invite-actions";
+export type {
+    TeamBannerActions,
+    TeamBannerMutationResult,
+    UpdateTeamFieldsFn,
+    UpdateTeamFieldsPayload,
+    UpdateTeamFieldsResult,
+} from "./types/team-fields-actions";
+
+export { ProjectTasksTab } from "./project/ProjectTasksTab";
+export { default as ProjectCalendarTab } from "./project/ProjectCalendarTab";
+export { ProjectAddMemberModal } from "./project/ProjectAddMemberModal";
+export { TaskRequestModal } from "./project/TaskRequestModal";
+export {
+    ProjectSettingsProjectTab,
+    ProjectSettingsSecurityTab,
+} from "./project/ProjectSettingsPanels";
+
+export { StatusModal } from "./workspace/StatusModal";
+export type { StatusModalValue } from "./workspace/StatusModal";
+export { default as WorkspaceCalendarTab } from "./workspace/CalendarTab";
+export { default as WorkspaceTaskDetailPanel } from "./workspace/TaskDetailPanel";
+
+export { TeamAddMemberModal } from "./team/TeamAddMemberModal";
+export { TeamCommunityTab } from "./team/TeamCommunityTab";
+export { TeamDetailLoadError } from "./team/TeamDetailLoadError";
+export { TeamIntroBannerBlock } from "./team/TeamIntroBannerBlock";
+export { TeamIntroEditModal } from "./team/TeamIntroEditModal";
+export {
+    TeamIntroPageContent,
+    type TeamIntroPageContentHandle,
+} from "./team/TeamIntroPageContent";

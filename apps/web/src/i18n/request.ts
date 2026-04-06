@@ -3,6 +3,9 @@ import { cookies, headers } from "next/headers";
 
 import { SUPPORTED_LOCALES, getWebMessages, parseLocale, type Locale } from "@repo/i18n";
 
+/** 서버·클라이언트 포맷 일치용 (미설정 시 next-intl ENVIRONMENT_FALLBACK). 필요 시 env로 교체 가능 */
+const APP_TIME_ZONE = process.env.NEXT_INTL_TIME_ZONE ?? "Asia/Seoul";
+
 export default getRequestConfig(async () => {
     const cookieStore = await cookies();
     const cookieLang = cookieStore.get("elivis_lang")?.value;
@@ -22,5 +25,6 @@ export default getRequestConfig(async () => {
     return {
         locale,
         messages: getWebMessages(locale) as Record<string, unknown>,
+        timeZone: APP_TIME_ZONE,
     };
 });

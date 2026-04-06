@@ -10,6 +10,7 @@
  *  2) 패키지 설치 (pnpm install)
  *  3) PostgreSQL·Redis 컨테이너 기동 + healthcheck 대기
  *  4) DB 마이그레이션 (prisma generate + prisma migrate dev)
+ *     실패 시 로컬 DB 강제 리셋(migrate reset --force) 후 한 번 더 시도
  */
 
 import { spawnSync, execFileSync } from "node:child_process";
@@ -27,6 +28,14 @@ function run(label, cmd) {
     console.error(`\n  ✖  실패: ${label}\n`);
     process.exit(result.status ?? 1);
   }
+}
+
+/** @returns {boolean} 성공 여부 (실패 시 exit 하지 않음) */
+function runTry(label, cmd) {
+  console.log(`\n  ▶  ${label}`);
+  console.log(`     $ ${cmd}\n`);
+  const result = spawnSync(cmd, { shell: true, stdio: "inherit", cwd: ROOT });
+  return result.status === 0;
 }
 
 function runSilent(cmd) {
@@ -172,10 +181,23 @@ if (!compose.useWaitFlag && !waitForPostgresReady()) {
 console.log("\n─── Step 4 / 4  DB 마이그레이션 ─────────────────────────────────────");
 console.log("     prisma generate → prisma migrate dev\n");
 
-run(
-  "DB 마이그레이션 (@repo/database db:setup)",
-  "pnpm --filter @repo/database db:setup",
-);
+const dbSetup =
+  "pnpm --filter @repo/database db:setup";
+const dbResetForce =
+  "pnpm --filter @repo/database exec dotenv -e ../../.env -- prisma migrate reset --force";
+
+if (!runTry("DB 마이그레이션 (@repo/database db:setup)", dbSetup)) {
+  console.error(`
+  ⚠  마이그레이션 오류가 발생했습니다. 로컬 개발 DB 강제 리셋을 진행한 뒤 다시 적용합니다.
+     (해당 DB의 기존 데이터가 모두 삭제됩니다.)
+
+     수동으로 동일 작업을 하려면:
+       cd packages/database
+       npx dotenv-cli -e ../../.env -- npx prisma migrate reset --force
+`);
+  run("DB 강제 리셋 (prisma migrate reset --force)", dbResetForce);
+  run("DB 마이그레이션 (재시도, @repo/database db:setup)", dbSetup);
+}
 
 // ── 완료 ──────────────────────────────────────────────────────────────────────
 console.log(`

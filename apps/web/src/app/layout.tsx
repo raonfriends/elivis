@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Noto_Sans_KR } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
-import { getLocale, getMessages } from "next-intl/server";
+import { getLocale, getMessages, getTimeZone } from "next-intl/server";
 import "./globals.css";
 
 const notoSans = Noto_Sans_KR({
@@ -22,11 +22,12 @@ export default async function RootLayout({
 }>) {
     const locale = await getLocale();
     const messages = await getMessages();
+    const timeZone = await getTimeZone();
 
     return (
         <html lang={locale} className={notoSans.variable}>
             <body className="antialiased font-sans">
-                <NextIntlClientProvider locale={locale} messages={messages}>
+                <NextIntlClientProvider locale={locale} messages={messages} timeZone={timeZone}>
                     {children}
                 </NextIntlClientProvider>
             </body>

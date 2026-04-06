@@ -4,7 +4,7 @@ import { fetchTeamById } from "@/lib/teams.server";
 import { checkTeamFavoriteAction } from "@/app/actions/teams";
 import { getMyProfile } from "@/lib/users";
 
-import { TeamDetailLoadError } from "./TeamDetailLoadError";
+import { TeamDetailLoadError } from "@repo/ui/team/TeamDetailLoadError";
 import { TeamDetailPageClient } from "./TeamDetailPageClient";
 
 /** 매 요청마다 팀 상세 조회 (캐시로 인한 잘못된 not-found 방지) */

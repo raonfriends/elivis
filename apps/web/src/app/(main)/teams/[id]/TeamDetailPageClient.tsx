@@ -5,11 +5,16 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 
-import { TeamAddMemberModal } from "./TeamAddMemberModal";
-import { TeamIntroEditModal } from "./TeamIntroEditModal";
-import { TeamIntroPageContent, type TeamIntroPageContentHandle } from "./TeamIntroPageContent";
-import { TeamIntroBannerBlock } from "./TeamIntroBannerBlock";
-import { TeamCommunityTab } from "./TeamCommunityTab";
+import {
+    TeamAddMemberModal,
+    TeamCommunityTab,
+    TeamIntroBannerBlock,
+    TeamIntroEditModal,
+    TeamIntroPageContent,
+    type TeamIntroPageContentHandle,
+    TeamFavoriteButton,
+    UserAvatar,
+} from "@repo/ui";
 import {
     addTeamFavoriteAction,
     delegateTeamLeaderAction,
@@ -18,7 +23,11 @@ import {
     removeTeamMemberAction,
     updateTeamFieldsAction,
 } from "@/app/actions/teams";
-import { TeamFavoriteButton, UserAvatar } from "@repo/ui";
+import {
+    teamBannerActionsForUi,
+    teamCommunityPostsActionsForUi,
+    teamInviteActionsForUi,
+} from "@/lib/team-detail-ui-actions";
 import type { TeamDetail, TeamMemberRow } from "@/lib/teams.server";
 
 type TeamTab = "intro" | "projects" | "members" | "community" | "settings";
@@ -51,7 +60,13 @@ function TeamPublicDetail({ team, isFavorite }: { team: TeamDetail; isFavorite: 
 
     return (
         <div className="flex min-h-full w-full flex-col">
-            <TeamIntroBannerBlock teamId={team.id} bannerUrl={team.bannerUrl} canEdit={false} variant="pageTop" />
+            <TeamIntroBannerBlock
+                teamId={team.id}
+                bannerUrl={team.bannerUrl}
+                canEdit={false}
+                variant="pageTop"
+                bannerActions={teamBannerActionsForUi}
+            />
             <div className="border-b border-stone-200 bg-white px-4 py-3 sm:px-5 md:px-6">
                 <div className="flex items-center gap-3">
                     <button
@@ -102,7 +117,11 @@ function TeamPublicDetail({ team, isFavorite }: { team: TeamDetail; isFavorite: 
             </div>
 
             <div className="min-h-0 flex-1 p-4 sm:p-5 md:p-6">
-                <TeamIntroPageContent team={team} />
+                <TeamIntroPageContent
+                    team={team}
+                    updateTeamFields={updateTeamFieldsAction}
+                    onAfterTeamFieldsMutation={() => router.refresh()}
+                />
             </div>
         </div>
     );
@@ -616,6 +635,8 @@ export function TeamDetailPageClient({
                     bannerUrl={team.bannerUrl}
                     canEdit={isLeader}
                     variant="pageTop"
+                    bannerActions={teamBannerActionsForUi}
+                    onAfterBannerMutation={() => router.refresh()}
                 />
             )}
             <div className="border-b border-stone-200 bg-white px-4 py-3 sm:px-5 md:px-6">
@@ -938,6 +959,8 @@ export function TeamDetailPageClient({
                             ref={introRef}
                             team={team}
                             onLayoutEditModeChange={setIntroLayoutEditMode}
+                            updateTeamFields={updateTeamFieldsAction}
+                            onAfterTeamFieldsMutation={() => router.refresh()}
                         />
                     </div>
                 )}
@@ -1047,6 +1070,7 @@ export function TeamDetailPageClient({
                         teamId={team.id}
                         myUserId={myUserId}
                         isLeader={isLeader}
+                        postsActions={teamCommunityPostsActionsForUi}
                     />
                 )}
 
@@ -1233,6 +1257,7 @@ export function TeamDetailPageClient({
                 teamId={team.id}
                 existingUserIds={memberUserIds}
                 onSuccess={() => router.refresh()}
+                inviteActions={teamInviteActionsForUi}
             />
 
             <TeamIntroEditModal
@@ -1240,6 +1265,8 @@ export function TeamDetailPageClient({
                 onClose={() => setIntroEditOpen(false)}
                 teamId={team.id}
                 initialIntroMessage={team.introMessage}
+                updateTeamFields={updateTeamFieldsAction}
+                onSaveSuccess={() => router.refresh()}
             />
 
             {composeChangeOpen && (

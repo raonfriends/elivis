@@ -7,232 +7,53 @@ import { badRequest, conflict, forbidden, notFound, ok, created } from "../utils
 import { publishNotification } from "../utils/notify";
 import { recordHistory } from "../services/history.service";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 요청 바디 / 파라미터 타입
-// ─────────────────────────────────────────────────────────────────────────────
+import type {
+    CreateWorkspacePriorityBody,
+    CreateWorkspaceStatusBody,
+    CreateWorkspaceTaskBody,
+    CreateWorkspaceTaskCommentBody,
+    CreateWorkspaceTaskNoteBody,
+    ReorderTasksBody,
+    UpdateWorkspaceBody,
+    UpdateWorkspacePriorityBody,
+    UpdateWorkspaceStatusBody,
+    UpdateWorkspaceTaskBody,
+    WorkspaceParams,
+    WorkspacePriorityParams,
+    WorkspaceStatusParams,
+    WorkspaceTaskAttachmentParams,
+    WorkspaceTaskCommentParams,
+    WorkspaceTaskNoteParams,
+    WorkspaceTaskParams,
+} from "./workspace/workspace.dto";
 
-export interface WorkspaceParams {
-    workspaceId: string;
-}
+export type {
+    CreateWorkspacePriorityBody,
+    CreateWorkspaceStatusBody,
+    CreateWorkspaceTaskBody,
+    CreateWorkspaceTaskCommentBody,
+    CreateWorkspaceTaskNoteBody,
+    ReorderTasksBody,
+    UpdateWorkspaceBody,
+    UpdateWorkspacePriorityBody,
+    UpdateWorkspaceStatusBody,
+    UpdateWorkspaceTaskBody,
+    WorkspaceParams,
+    WorkspacePriorityParams,
+    WorkspaceStatusParams,
+    WorkspaceTaskAttachmentParams,
+    WorkspaceTaskCommentParams,
+    WorkspaceTaskNoteParams,
+    WorkspaceTaskParams,
+} from "./workspace/workspace.dto";
 
-/** PATCH /api/workspaces/:workspaceId — 본인 워크스페이스 메타 */
-export interface UpdateWorkspaceBody {
-    /** null이면 프로젝트명으로 되돌림(저장 값 삭제) */
-    sidebarLabel: string | null;
-}
-
-export interface WorkspaceTaskParams extends WorkspaceParams {
-    taskId: string;
-}
-
-export interface WorkspaceStatusParams extends WorkspaceParams {
-    statusId: string;
-}
-
-export interface CreateWorkspaceTaskBody {
-    title: string;
-    statusId?: string;
-    priorityId?: string;
-    assigneeId?: string;
-    startDate?: string;
-    dueDate?: string;
-    order?: number;
-    parentId?: string;
-}
-
-export interface UpdateWorkspaceTaskBody {
-    title?: string;
-    description?: string | null;
-    statusId?: string;
-    priorityId?: string | null;
-    assigneeId?: string | null;
-    startDate?: string | null;
-    dueDate?: string | null;
-    order?: number;
-}
-
-export interface WorkspaceTaskCommentParams extends WorkspaceTaskParams {
-    commentId: string;
-}
-
-export interface CreateWorkspaceTaskCommentBody {
-    content: string;
-}
-
-export interface WorkspaceTaskAttachmentParams extends WorkspaceTaskParams {
-    attachmentId: string;
-}
-
-export interface WorkspaceTaskNoteParams extends WorkspaceTaskParams {
-    noteId: string;
-}
-
-export interface CreateWorkspaceTaskNoteBody {
-    content: string;
-}
-
-export interface CreateWorkspaceStatusBody {
-    name: string;
-    color?: string;
-    order?: number;
-    notifyOnChange?: boolean;
-}
-
-export interface UpdateWorkspaceStatusBody {
-    name?: string;
-    color?: string;
-    order?: number;
-    notifyOnChange?: boolean;
-}
-
-export interface WorkspacePriorityParams extends WorkspaceParams {
-    priorityId: string;
-}
-
-export interface CreateWorkspacePriorityBody {
-    name: string;
-    color?: string;
-    order?: number;
-    value?: number;
-}
-
-export interface UpdateWorkspacePriorityBody {
-    name?: string;
-    color?: string;
-    order?: number;
-    value?: number;
-}
-
-export interface ReorderTasksBody {
-    items: Array<{ id: string; order: number; statusId?: string }>;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// 헬퍼
-// ─────────────────────────────────────────────────────────────────────────────
-
-/** 워크스페이스 소유자인지 확인 후 row 반환. 없으면 null */
-async function findOwnWorkspace(
-    app: FastifyInstance,
-    workspaceId: string,
-    userId: string,
-) {
-    return app.prisma.workspace.findFirst({
-        where: { id: workspaceId, userId },
-    });
-}
-
-/**
- * 워크스페이스 소유자이거나 같은 프로젝트 멤버면 접근 허용.
- * 직접 ProjectMember 뿐만 아니라 팀을 통한 프로젝트 접근도 허용.
- * 조회(읽기) 전용 API에 사용.
- */
-async function findAccessibleWorkspace(
-    app: FastifyInstance,
-    workspaceId: string,
-    userId: string,
-) {
-    const ws = await app.prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        select: { id: true, userId: true, projectId: true },
-    });
-    if (!ws) return null;
-    // 소유자면 바로 허용
-    if (ws.userId === userId) return ws;
-    // 직접 프로젝트 멤버 확인
-    const directMember = await app.prisma.projectMember.findUnique({
-        where: { userId_projectId: { userId, projectId: ws.projectId } },
-        select: { role: true },
-    });
-    if (directMember) return ws;
-    // 팀을 통한 프로젝트 접근 확인 (공개 프로젝트 + 팀 멤버)
-    const teamAccess = await (app.prisma as any).project.findFirst({
-        where: {
-            id: ws.projectId,
-            isPublic: true,
-            OR: [
-                { team: { members: { some: { userId } } } },
-                { projectTeams: { some: { team: { members: { some: { userId } } } } } },
-            ],
-        },
-        select: { id: true },
-    });
-    return teamAccess ? ws : null;
-}
-
-/** 접근 불가 시 404/403 응답 전송 */
-async function rejectNoWorkspace(
-    app: FastifyInstance,
-    workspaceId: string,
-    lang: string,
-    reply: FastifyReply,
-) {
-    const exists = await app.prisma.workspace.findUnique({
-        where: { id: workspaceId },
-        select: { id: true },
-    });
-    return reply.code(exists ? 403 : 404).send(
-        exists
-            ? forbidden(t(lang, MSG.WORKSPACE_FORBIDDEN))
-            : notFound(t(lang, MSG.WORKSPACE_NOT_FOUND)),
-    );
-}
-
-/** 업무에 status + priority 인라인 조인 (별도 query) */
-async function withStatus(
-    app: FastifyInstance,
-    task: { statusId: string; priorityId?: string | null; [key: string]: unknown },
-) {
-    const [status, priority] = await Promise.all([
-        (app.prisma as any).workspaceStatus.findUnique({
-            where: { id: task.statusId },
-            select: { id: true, name: true, color: true, order: true },
-        }),
-        task.priorityId
-            ? (app.prisma as any).workspacePriority.findUnique({
-                where: { id: task.priorityId },
-                select: { id: true, name: true, color: true, order: true, value: true },
-              })
-            : null,
-    ]);
-    return {
-        ...task,
-        status: status ?? { id: task.statusId, name: "—", color: "gray", order: 0 },
-        priority: priority ?? null,
-    };
-}
-
-async function withStatusMany(
-    app: FastifyInstance,
-    tasks: Array<{ statusId: string; priorityId?: string | null; [key: string]: unknown }>,
-) {
-    if (tasks.length === 0) return tasks;
-
-    const statusIds = [...new Set(tasks.map((t) => t.statusId))];
-    const priorityIds = [...new Set(tasks.map((t) => t.priorityId).filter(Boolean))] as string[];
-
-    const [statuses, priorities] = await Promise.all([
-        (app.prisma as any).workspaceStatus.findMany({
-            where: { id: { in: statusIds } },
-            select: { id: true, name: true, color: true, order: true },
-        }),
-        priorityIds.length > 0
-            ? (app.prisma as any).workspacePriority.findMany({
-                where: { id: { in: priorityIds } },
-                select: { id: true, name: true, color: true, order: true, value: true },
-              })
-            : [],
-    ]);
-
-    const statusMap = new Map(statuses.map((s: { id: string }) => [s.id, s]));
-    const priorityMap = new Map(priorities.map((p: { id: string }) => [p.id, p]));
-
-    return tasks.map((task) => ({
-        ...task,
-        status: statusMap.get(task.statusId) ?? { id: task.statusId, name: "—", color: "gray", order: 0 },
-        priority: task.priorityId ? (priorityMap.get(task.priorityId as string) ?? null) : null,
-    }));
-}
+import {
+    findAccessibleWorkspace,
+    findOwnWorkspace,
+    rejectNoWorkspace,
+    withStatus,
+    withStatusMany,
+} from "./workspace/workspace-queries";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 컨트롤러

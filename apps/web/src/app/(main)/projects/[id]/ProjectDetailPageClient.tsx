@@ -4,16 +4,21 @@ import { useParams, useRouter } from "next/navigation";
 import { useState, useEffect, useMemo } from "react";
 
 import { addProjectFavoriteAction, removeProjectFavoriteAction } from "@/app/actions/projects";
+import { createTaskRequestAction } from "@/app/actions/taskRequests";
 import { getProject, type Project, type ProjectUser, type ProjectViewerRole } from "@/lib/projects";
-import { MarkdownContent, ProjectFavoriteButton, UserAvatar } from "@repo/ui";
+import { projectSettingsActions } from "@/lib/project-settings-actions";
+import { workspaceTaskPanelActions } from "@/lib/workspace-task-panel-actions";
 import { formatTaskTitleForList } from "@/lib/task-title-display";
-
-import { ProjectSettingsProjectTab, ProjectSettingsSecurityTab } from "./ProjectSettingsPanels";
-import { ProjectTasksTab, type ApiProjectTasksItem } from "./ProjectTasksTab";
-
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore – dynamic segment folder name
-import ProjectCalendarTab from "./ProjectCalendarTab";
+import {
+    MarkdownContent,
+    ProjectCalendarTab,
+    ProjectFavoriteButton,
+    ProjectSettingsProjectTab,
+    ProjectSettingsSecurityTab,
+    ProjectTasksTab,
+    UserAvatar,
+    type ApiProjectTasksItem,
+} from "@repo/ui";
 
 /** 서버에서 API로 받은 데이터는 props로 전달(팀 상세와 동일). Server Action 직렬화 없음 */
 export type ProjectDetailLoadMode = "server_ok" | "client_only";
@@ -596,13 +601,18 @@ export function ProjectDetailPageClient({
                     <ProjectTasksTab
                         participants={project?.participants ?? []}
                         projectTasksData={projectTasksData}
+                        taskPanelActions={workspaceTaskPanelActions}
+                        createTaskRequest={createTaskRequestAction}
                         currentUserId={currentUserId}
                         projectId={id}
                     />
                 )}
 
                 {activeTab === "calendar" && (
-                    <ProjectCalendarTab projectTasksData={projectTasksData} />
+                    <ProjectCalendarTab
+                        projectTasksData={projectTasksData}
+                        taskPanelActions={workspaceTaskPanelActions}
+                    />
                 )}
 
                 {activeTab === "wiki" && (
@@ -672,9 +682,20 @@ export function ProjectDetailPageClient({
                                 <ProjectSettingsProjectTab
                                     project={project}
                                     onUpdated={setProject}
+                                    settingsActions={{
+                                        updateProject: projectSettingsActions.updateProject,
+                                        searchUsers: projectSettingsActions.searchUsers,
+                                        addProjectMember: projectSettingsActions.addProjectMember,
+                                    }}
                                 />
                             ) : (
-                                <ProjectSettingsSecurityTab project={project} />
+                                <ProjectSettingsSecurityTab
+                                    project={project}
+                                    settingsActions={{
+                                        deleteProject: projectSettingsActions.deleteProject,
+                                    }}
+                                    onAfterProjectDelete={() => router.push("/projects")}
+                                />
                             )}
                         </div>
                     </div>
