@@ -147,35 +147,6 @@ pnpm dev
 | 알림 (Socket.IO) | http://localhost:4001 (웹은 `NEXT_PUBLIC_NOTIFICATION_URL`로 연결) |
 | 데스크톱 | Electron 창 (`pnpm dev` 시 웹 준비 후 기동) |
 
-### Windows: `EPERM` … `query_engine-windows.dll.node` (rename)
-
-백신 실시간 검사·Windows 검색 인덱싱·**OneDrive가 동기화하는 폴더**(예: 바탕화면·문서 아래 클론)가 `node_modules` 안 파일을 잠그면 `prisma generate`가 실패할 수 있습니다.
-
-1. 가능하면 저장소를 **`C:\dev\elivis`처럼 OneDrive 밖**으로 옮깁니다.  
-2. 프로젝트 폴더를 Windows Defender **제외** 목록에 넣거나, 설치 전에 실시간 검사를 잠시 끕니다.  
-3. 루트 `.npmrc`에 **`node-linker=hoisted`** 가 이미 설정되어 있습니다. 적용을 위해 **`node_modules`를 지운 뒤** 다시 설치합니다.
-
-```powershell
-Remove-Item -Recurse -Force node_modules
-pnpm install
-```
-
-그다음 `pnpm run setup:win` 또는 `pnpm run setup`을 다시 실행하면 됩니다.
-
-### Prisma P3006: `add_rbac_and_password` — shadow DB에 `Project` 없음
-
-마이그레이션 폴더 이름 **알파벳·시간순**으로 적용되는데, 예전에는 `init`보다 `add_rbac_and_password`가 앞서 있어 빈 DB에서 `User`/`Project`가 없는 상태로 ALTER가 먼저 실행되었습니다. 지금은 **`20260330080000_init`** 이 그보다 앞에 오도록 정리되어 있습니다.
-
-**이미 로컬 DB에 `20260330120000_init`만 기록돼 있고 스키마는 맞는 경우**, 이름만 맞추면 됩니다.
-
-```sql
-UPDATE "_prisma_migrations"
-SET migration_name = '20260330080000_init'
-WHERE migration_name = '20260330120000_init';
-```
-
-(또는 DB를 비우고 `pnpm --filter @repo/database db:setup`을 처음부터 다시.)
-
 ---
 
 ## 사용 방법 (앱 관점)

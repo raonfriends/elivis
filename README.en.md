@@ -145,35 +145,6 @@ pnpm dev
 | Notifications (Socket.IO) | http://localhost:4001 (web uses `NEXT_PUBLIC_NOTIFICATION_URL`) |
 | Desktop | Electron window (starts after web is ready with `pnpm dev`) |
 
-### Windows: `EPERM` renaming `query_engine-windows.dll.node`
-
-Antivirus real-time scanning, Windows Search indexing, or **OneDrive-synced folders** (e.g. clone under Desktop/Documents) can lock files under `node_modules` and make `prisma generate` fail.
-
-1. Prefer a path **outside OneDrive** (e.g. `C:\dev\elivis`).  
-2. Add the project folder to Windows Defender **exclusions**, or pause real-time protection briefly while installing.  
-3. The repo `.npmrc` sets **`node-linker=hoisted`** to reduce this. After changing it, **delete `node_modules` and reinstall**:
-
-```powershell
-Remove-Item -Recurse -Force node_modules
-pnpm install
-```
-
-Then run `pnpm run setup:win` or `pnpm run setup` again.
-
-### Prisma P3006: `add_rbac_and_password` — `Project` missing on shadow DB
-
-Migrations apply in **folder name order**. Previously `add_rbac_and_password` ran before `init`, so the shadow DB had no `User`/`Project` tables yet. **`20260330080000_init`** is now ordered before `20260330091122_add_rbac_and_password`.
-
-If your local DB already recorded **`20260330120000_init`** and the schema matches, align the name:
-
-```sql
-UPDATE "_prisma_migrations"
-SET migration_name = '20260330080000_init'
-WHERE migration_name = '20260330120000_init';
-```
-
-(Or reset the DB and run `pnpm --filter @repo/database db:setup` from scratch.)
-
 ---
 
 ## Usage (product view)
