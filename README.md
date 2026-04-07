@@ -1,19 +1,62 @@
-# Elivis
+<p align="center">
+  <img src="docs/assets/readme/logo.png" alt="Elivis 로고" width="140" />
+</p>
 
-**실사용에 맞춘 팀·프로젝트·업무 관리.** 웹과 데스크톱에서 같은 UI로 쓰고, 직접 서버에 올려 운영하는 **셀프 호스팅**을 전제로 두었습니다.
+<h1 align="center">Elivis</h1>
 
-> English readers: **[README.en.md](README.en.md)** · **[Documentation (English)](docs/en/README.md)**
+<p align="center">
+  <strong>실사용에 맞춘 팀·프로젝트·업무 관리</strong><br />
+  웹과 데스크톱에서 같은 UI로 쓰고, 직접 서버에 올려 운영하는 <strong>셀프 호스팅</strong>을 전제로 두었습니다.
+</p>
 
-자세한 아키텍처·API·빌드 옵션은 **[`docs/`](docs/README.md)** (한국어) 를 참고하세요.
+<p align="center">
+  <a href="#라이선스"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License MIT" /></a>
+  <a href="https://github.com/haeinkkk/elivis"><img src="https://img.shields.io/badge/PRs-welcome-brightgreen.svg" alt="PRs welcome" /></a>
+  <a href="docs/README.md"><img src="https://img.shields.io/badge/docs-한국어-333333.svg" alt="Docs KO" /></a>
+  <a href="docs/en/README.md"><img src="https://img.shields.io/badge/docs-English-333333.svg" alt="Docs EN" /></a>
+</p>
+
+<p align="center">
+  English: <a href="README.en.md"><strong>README.en.md</strong></a> · <a href="docs/en/README.md"><strong>Documentation</strong></a>
+</p>
 
 ### Made by
+
+만든 사람 · 업데이트 소식은 여기서도 확인해 주세요.
 
 [![Instagram](https://img.shields.io/badge/Instagram-%40hi.kimsunim-E4405F?logo=instagram&logoColor=white)](https://www.instagram.com/hi.kimsunim/)
 [![Threads](https://img.shields.io/badge/Threads-%40hi.kimsunim-000000?logo=threads&logoColor=white)](https://www.threads.com/@hi.kimsunim)
 
 ---
 
-## 무엇을 하나요
+## 목차
+
+- [스크린샷](#스크린샷)
+- [주요 기능](#주요-기능)
+- [기술 스택](#기술-스택)
+- [사전 요구 사항](#사전-요구-사항)
+- [빠른 시작](#빠른-시작)
+- [사용 방법](#사용-방법)
+- [자주 쓰는 명령](#자주-쓰는-명령)
+- [프로젝트 구조](#프로젝트-구조)
+- [문서](#문서)
+- [기여](#기여)
+- [라이선스](#라이선스)
+
+---
+
+## 스크린샷
+
+<p align="center">
+  <img src="docs/assets/readme/screen1.png" alt="Elivis 앱 화면 1" width="780" />
+</p>
+<p align="center">
+  <img src="docs/assets/readme/screen2.png" alt="Elivis 앱 화면 2" width="780" />
+</p>
+
+---
+
+## 주요 기능
 
 - **팀**을 만들고 멤버를 초대하며, 팀 단위 **게시판(커뮤니티)** 으로 소통할 수 있습니다.
 - **프로젝트**를 만들고 멤버·역할을 관리하고, 사람마다 **워크스페이스(내 업무 보드)** 가 생깁니다.
@@ -21,9 +64,11 @@
 - **알림**은 REST로 조회·읽음 처리하고, 실시간 갱신은 **Socket.IO** 알림 서버가 담당합니다.
 - 비어 있는 DB로 API를 처음 띄우면 터미널에 **초기 관리자용 setup 토큰**이 한 번 출력됩니다.
 
+아키텍처·API·빌드 옵션 등은 **[`docs/`](docs/README.md)** (한국어) 를 참고하세요.
+
 ---
 
-## 기술 스택 (요약)
+## 기술 스택
 
 | 구분      | 기술                               |
 | --------- | ---------------------------------- |
@@ -38,7 +83,7 @@
 
 ---
 
-## 필요한 것
+## 사전 요구 사항
 
 | 도구           | 버전                                       |
 | -------------- | ------------------------------------------ |
@@ -57,7 +102,7 @@ git clone https://github.com/haeinkkk/elivis.git
 cd elivis
 ```
 
-- **도구** — 위 **필요한 것** 절(Node.js, pnpm, Docker)을 갖춥니다.
+- **도구** — 위 **사전 요구 사항**(Node.js, pnpm, Docker)을 갖춥니다.
 - **환경 변수**
 
 ```bash
@@ -98,7 +143,7 @@ pnpm dev
 
 ---
 
-## 사용 방법 (앱 관점)
+## 사용 방법
 
 1. **첫 계정**  
    DB에 사용자가 없을 때만 API 서버 로그에 `SETUP TOKEN`이 출력됩니다. 그때는 회원가입 요청에 `setupToken`을 넣어 **SUPER_ADMIN**을 만듭니다. 이후 일반 사용자는 토큰 없이 가입·초대 흐름을 따릅니다. ([상세: `docs/server/README.md` — 초기 관리자](docs/server/README.md#초기-관리자-생성))
@@ -137,7 +182,7 @@ pnpm dev
 
 ---
 
-## 저장소 구조 (요약)
+## 프로젝트 구조
 
 ```
 apps/
@@ -154,7 +199,7 @@ docs/                  # 상세 문서 (앱별 README)
 
 ---
 
-## 문서 목록
+## 문서
 
 **한국어:** [문서 인덱스](docs/README.md) · [서버](docs/server/README.md) · [웹](docs/web/README.md) · [데스크톱](docs/desktop/README.md)
 
