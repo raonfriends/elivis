@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import bcrypt from "bcryptjs";
 import sharp from "sharp";
 import { t } from "@repo/i18n";
 
@@ -34,6 +35,18 @@ export interface UpdateMeBody {
     status?: UserStatusValue;
 }
 
+export interface ChangePasswordBody {
+    currentPassword: string;
+    newPassword: string;
+}
+
+export interface PatchNotificationPrefsBody {
+    teams?: { teamId: string; notifyEnabled: boolean }[];
+    projects?: { projectId: string; notifyEnabled: boolean }[];
+}
+
+const MIN_NEW_PASSWORD_LEN = 8;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 컨트롤러
 // ─────────────────────────────────────────────────────────────────────────────
@@ -49,6 +62,7 @@ export function createUserController(app: FastifyInstance) {
         avatarUrl: true,
         systemRole: true,
         createdAt: true,
+        authProvider: true,
     } as const;
 
     // ── GET /api/users/me ──────────────────────────────────────────────────────
@@ -180,5 +194,126 @@ export function createUserController(app: FastifyInstance) {
         return reply.send(ok(users, t(request.lang, MSG.USER_SEARCH_RESULTS)));
     }
 
-    return { getMe, updateMe, uploadAvatar, deleteAvatar, searchUsers };
+    // ── PATCH /api/users/me/password ───────────────────────────────────────────
+    async function changePassword(
+        request: FastifyRequest<{ Body: ChangePasswordBody }>,
+        reply: FastifyReply,
+    ) {
+        const { currentPassword, newPassword } = request.body ?? ({} as ChangePasswordBody);
+        if (
+            typeof currentPassword !== "string" ||
+            typeof newPassword !== "string" ||
+            !currentPassword ||
+            !newPassword
+        ) {
+            return reply
+                .code(400)
+                .send(badRequest(t(request.lang, MSG.USER_PASSWORD_FIELDS_REQUIRED)));
+        }
+        if (newPassword.length < MIN_NEW_PASSWORD_LEN) {
+            return reply
+                .code(400)
+                .send(badRequest(t(request.lang, MSG.USER_PASSWORD_NEW_TOO_SHORT)));
+        }
+
+        const row = await app.prisma.user.findUnique({
+            where: { id: request.userId },
+            select: { password: true, authProvider: true },
+        });
+        if (!row) {
+            return reply.code(404).send(notFound(t(request.lang, MSG.USER_NOT_FOUND)));
+        }
+        if (row.authProvider !== "LOCAL") {
+            return reply.code(400).send(badRequest(t(request.lang, MSG.USER_PASSWORD_LDAP_ONLY)));
+        }
+        const valid = row.password && (await bcrypt.compare(currentPassword, row.password));
+        if (!valid) {
+            return reply
+                .code(400)
+                .send(badRequest(t(request.lang, MSG.USER_PASSWORD_CURRENT_WRONG)));
+        }
+
+        const hashed = await bcrypt.hash(newPassword, 12);
+        await app.prisma.user.update({
+            where: { id: request.userId },
+            data: { password: hashed },
+        });
+
+        return reply.send(ok({ success: true }, t(request.lang, MSG.USER_PASSWORD_UPDATED)));
+    }
+
+    async function buildNotificationPrefs(userId: string) {
+        const [teamRows, projectRows] = await Promise.all([
+            app.prisma.teamMember.findMany({
+                where: { userId },
+                select: { notifyEnabled: true, team: { select: { id: true, name: true } } },
+                orderBy: { team: { name: "asc" } },
+            }),
+            app.prisma.projectMember.findMany({
+                where: { userId },
+                select: { notifyEnabled: true, project: { select: { id: true, name: true } } },
+                orderBy: { project: { name: "asc" } },
+            }),
+        ]);
+        return {
+            teams: teamRows.map((r) => ({
+                id: r.team.id,
+                name: r.team.name,
+                notifyEnabled: r.notifyEnabled,
+            })),
+            projects: projectRows.map((r) => ({
+                id: r.project.id,
+                name: r.project.name,
+                notifyEnabled: r.notifyEnabled,
+            })),
+        };
+    }
+
+    // ── GET /api/users/me/notification-preferences ─────────────────────────────
+    async function getNotificationPreferences(request: FastifyRequest, reply: FastifyReply) {
+        const data = await buildNotificationPrefs(request.userId);
+        return reply.send(ok(data, t(request.lang, MSG.USER_NOTIFICATION_PREFS_FETCHED)));
+    }
+
+    // ── PATCH /api/users/me/notification-preferences ───────────────────────────
+    async function patchNotificationPreferences(
+        request: FastifyRequest<{ Body: PatchNotificationPrefsBody }>,
+        reply: FastifyReply,
+    ) {
+        const { teams, projects } = request.body ?? {};
+        const userId = request.userId;
+
+        if (teams?.length) {
+            for (const row of teams) {
+                if (!row?.teamId) continue;
+                await app.prisma.teamMember.updateMany({
+                    where: { userId, teamId: row.teamId },
+                    data: { notifyEnabled: !!row.notifyEnabled },
+                });
+            }
+        }
+        if (projects?.length) {
+            for (const row of projects) {
+                if (!row?.projectId) continue;
+                await app.prisma.projectMember.updateMany({
+                    where: { userId, projectId: row.projectId },
+                    data: { notifyEnabled: !!row.notifyEnabled },
+                });
+            }
+        }
+
+        const data = await buildNotificationPrefs(userId);
+        return reply.send(ok(data, t(request.lang, MSG.USER_NOTIFICATION_PREFS_UPDATED)));
+    }
+
+    return {
+        getMe,
+        updateMe,
+        uploadAvatar,
+        deleteAvatar,
+        searchUsers,
+        changePassword,
+        getNotificationPreferences,
+        patchNotificationPreferences,
+    };
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import { useMemo } from "react";
 import { useTranslations } from "next-intl";
 
 import {
@@ -11,7 +10,12 @@ import {
     type WorkloadBand,
 } from "@repo/ui";
 
-import { computeStats, StatsRow, type WorkspaceDataItem } from "@/app/(main)/mywork/MyWorkOverviewClient";
+import {
+    computeTeamTaskMetrics,
+    type WorkspaceDataItem,
+} from "@/app/(main)/mywork/MyWorkOverviewClient";
+
+import { buildTeamSections, type TeamPerformanceSection } from "./performance-team-groups";
 
 function bandBadgeClass(band: WorkloadBand): string {
     switch (band) {
@@ -54,75 +58,6 @@ function bandLabelKey(
     }
 }
 
-function diagnosisKeyFromBand(
-    band: WorkloadBand,
-): "diagnosisRelaxed" | "diagnosisNormal" | "diagnosisOverload" | "diagnosisDanger" {
-    switch (band) {
-        case "relaxed":
-            return "diagnosisRelaxed";
-        case "normal":
-            return "diagnosisNormal";
-        case "overload":
-            return "diagnosisOverload";
-        default:
-            return "diagnosisDanger";
-    }
-}
-
-type TeamPerformanceSection = {
-    id: string;
-    name: string;
-    items: WorkspaceDataItem[];
-};
-
-function buildTeamSections(list: WorkspaceDataItem[]): TeamPerformanceSection[] {
-    const map = new Map<string, { name: string; ids: Set<string>; items: WorkspaceDataItem[] }>();
-
-    for (const item of list) {
-        const teams = [
-            item.workspace.project.team,
-            ...item.workspace.project.projectTeams.map((pt) => pt.team),
-        ].filter(Boolean) as { id: string; name: string }[];
-
-        if (teams.length === 0) {
-            const id = "__personal__";
-            let e = map.get(id);
-            if (!e) {
-                e = { name: "", ids: new Set(), items: [] };
-                map.set(id, e);
-            }
-            if (!e.ids.has(item.workspace.id)) {
-                e.ids.add(item.workspace.id);
-                e.items.push(item);
-            }
-            continue;
-        }
-
-        const seenTeam = new Set<string>();
-        for (const t of teams) {
-            if (seenTeam.has(t.id)) continue;
-            seenTeam.add(t.id);
-            let e = map.get(t.id);
-            if (!e) {
-                e = { name: t.name, ids: new Set(), items: [] };
-                map.set(t.id, e);
-            }
-            if (!e.ids.has(item.workspace.id)) {
-                e.ids.add(item.workspace.id);
-                e.items.push(item);
-            }
-        }
-    }
-
-    return [...map.entries()]
-        .map(([id, v]) => ({ id, name: v.name, items: v.items }))
-        .sort((a, b) => {
-            if (a.id === "__personal__") return 1;
-            if (b.id === "__personal__") return -1;
-            return a.name.localeCompare(b.name, "ko");
-        });
-}
-
 function workloadForUserInItems(items: WorkspaceDataItem[], userId: string, now: Date) {
     const wtasks = [];
     for (const { tasks, statuses } of items) {
@@ -135,100 +70,142 @@ function workloadForUserInItems(items: WorkspaceDataItem[], userId: string, now:
     return calculateWorkloadScore(wtasks, now);
 }
 
-function activeAssignedTopLevelCount(items: WorkspaceDataItem[], userId: string): number {
-    let n = 0;
-    for (const { tasks, statuses } of items) {
-        for (const t of tasks) {
-            if (t.parentId) continue;
-            if (t.assignee?.id !== userId) continue;
-            const sem = statuses.find((s) => s.id === t.statusId)?.semantic;
-            if (sem === "DONE") continue;
-            n++;
-        }
-    }
-    return n;
+function TeamStatsDashboardFixed({
+    sections,
+    personalLabel,
+    teamColumnLabel,
+    emptyLabel,
+}: {
+    sections: TeamPerformanceSection[];
+    personalLabel: string;
+    teamColumnLabel: string;
+    emptyLabel: string;
+}) {
+    const td = useTranslations("workspace.dashboard");
+
+    const cols = [
+        { key: "total" as const, label: td("totalTasks") },
+        { key: "completed" as const, label: td("completed") },
+        { key: "inProgress" as const, label: td("statInProgress") },
+        { key: "onHold" as const, label: td("statOnHold") },
+        { key: "overdue" as const, label: td("statOverdue") },
+        { key: "dueWithin3" as const, label: td("dueSoon") },
+    ];
+
+    return (
+        <div className="overflow-x-auto rounded-xl border border-stone-200 bg-stone-50/50">
+            <table className="w-full min-w-[720px] border-collapse text-left text-sm">
+                <thead>
+                    <tr className="border-b border-stone-200 bg-white/90">
+                        <th className="sticky left-0 z-[1] min-w-[140px] border-r border-stone-100 bg-white px-3 py-2.5 text-xs font-semibold text-stone-600">
+                            {teamColumnLabel}
+                        </th>
+                        {cols.map((c) => (
+                            <th
+                                key={c.key}
+                                className="px-2 py-2.5 text-center text-[11px] font-semibold text-stone-500"
+                            >
+                                {c.label}
+                            </th>
+                        ))}
+                    </tr>
+                </thead>
+                <tbody>
+                    {sections.length === 0 ? (
+                        <tr>
+                            <td
+                                colSpan={1 + cols.length}
+                                className="px-3 py-8 text-center text-sm text-stone-500"
+                            >
+                                {emptyLabel}
+                            </td>
+                        </tr>
+                    ) : (
+                        sections.map((section) => {
+                            const m = computeTeamTaskMetrics(section.items);
+                            const rowVals = {
+                                total: m.total,
+                                completed: m.completed,
+                                inProgress: m.inProgress,
+                                onHold: m.onHold,
+                                overdue: m.overdue,
+                                dueWithin3: m.dueWithin3,
+                            };
+                            const teamName =
+                                section.id === "__personal__" ? personalLabel : section.name;
+                            return (
+                                <tr
+                                    key={section.id}
+                                    className="border-b border-stone-100 last:border-b-0"
+                                >
+                                    <td className="sticky left-0 z-[1] border-r border-stone-100 bg-white px-3 py-2 text-xs font-semibold text-stone-800">
+                                        {teamName}
+                                    </td>
+                                    {cols.map((c) => (
+                                        <td
+                                            key={c.key}
+                                            className="px-1 py-2 text-center tabular-nums text-stone-900"
+                                        >
+                                            <span className="inline-block min-w-[2rem] text-sm font-semibold">
+                                                {rowVals[c.key]}
+                                            </span>
+                                        </td>
+                                    ))}
+                                </tr>
+                            );
+                        })
+                    )}
+                </tbody>
+            </table>
+        </div>
+    );
 }
 
 export function MyPerformanceOverviewClient({
     workspaceDataList,
     currentUserId,
+    selectedTeamId,
+    onSelectTeam,
 }: {
     workspaceDataList: WorkspaceDataItem[];
     currentUserId: string;
+    selectedTeamId: string | null;
+    onSelectTeam: (teamId: string | null) => void;
 }) {
     const t = useTranslations("myworkPerformance");
     const tm = useTranslations("mywork");
     const tp = useTranslations("projects.detail.performance");
 
-    const now = useMemo(() => {
-        const d = new Date();
-        d.setHours(0, 0, 0, 0);
-        return d;
-    }, []);
+    const now = new Date();
+    now.setHours(0, 0, 0, 0);
 
-    const stats = computeStats(workspaceDataList);
-    const teamSections = useMemo(() => buildTeamSections(workspaceDataList), [workspaceDataList]);
-
-    const globalWorkload = useMemo(
-        () => workloadForUserInItems(workspaceDataList, currentUserId, now),
-        [workspaceDataList, currentUserId, now],
-    );
-    const globalBand = getWorkloadBand(globalWorkload.total);
-    const barPct = Math.min(100, (globalWorkload.total / WORKLOAD_CHART_MAX_SCORE) * 100);
+    const teamSections = buildTeamSections(workspaceDataList);
 
     return (
         <div className="border-b border-stone-200 bg-white">
             <div className="px-4 py-4 sm:px-6">
                 <h1 className="text-lg font-bold text-stone-800 sm:text-xl">{t("title")}</h1>
-                <p className="mt-0.5 text-xs text-stone-500 sm:text-sm">{t("subtitle")}</p>
             </div>
 
+            {/* 1) 팀별 업무 건수 대시보드 */}
             <div className="border-t border-stone-100 px-4 py-4 sm:px-6">
-                <StatsRow {...stats} />
+                <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-500">
+                    {t("adminDashboardTitle")}
+                </h2>
+                <TeamStatsDashboardFixed
+                    sections={teamSections}
+                    personalLabel={tm("personalProject")}
+                    teamColumnLabel={t("adminDashboardTeamCol")}
+                    emptyLabel={t("teamSectionEmpty")}
+                />
             </div>
 
+            {/* 2) 팀별 과부하 — 클릭 시 하단 타임라인 */}
             <div className="border-t border-stone-100 px-4 py-5 sm:px-6">
-                <h2 className="text-sm font-semibold text-stone-800">{tp("workloadTitle")}</h2>
-                <p className="mt-1 text-xs text-stone-500">{tp("workloadSubtitle")}</p>
-                <p className="mt-1 text-[11px] text-stone-400">{tp("workloadFormula")}</p>
-
-                <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                        <p className="text-xs font-medium text-stone-500">{t("myWorkloadCaption")}</p>
-                        <p className="mt-1 text-2xl font-bold tabular-nums text-stone-900">
-                            {Math.round(globalWorkload.total * 10) / 10}
-                            <span className="ml-1 text-sm font-medium text-stone-500">
-                                {tp("scoreUnit")}
-                            </span>
-                        </p>
-                    </div>
-                    <span
-                        className={`inline-flex w-fit items-center rounded-lg px-2.5 py-1 text-xs font-semibold ring-1 ${bandBadgeClass(globalBand)}`}
-                    >
-                        {tp(bandLabelKey(globalBand))}
-                    </span>
-                </div>
-
-                <div className="mt-3">
-                    <div className="h-2.5 w-full overflow-hidden rounded-full bg-stone-100">
-                        <div
-                            className={`h-full rounded-full transition-all ${bandBarClass(globalBand)}`}
-                            style={{ width: `${barPct}%` }}
-                        />
-                    </div>
-                    <p className="mt-1 text-[11px] text-stone-400">
-                        {tp("chartScaleHint", { max: WORKLOAD_CHART_MAX_SCORE })}
-                    </p>
-                </div>
-
-                <p className="mt-3 text-sm text-stone-700">{tp(diagnosisKeyFromBand(globalBand))}</p>
-            </div>
-
-            <div className="border-t border-stone-100 px-4 py-5 sm:px-6">
-                <h2 className="text-sm font-semibold text-stone-800">{t("teamSectionTitle")}</h2>
-                <p className="mt-1 text-xs text-stone-500">{t("teamSectionSubtitle")}</p>
-
-                <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-stone-500">
+                    {t("adminWorkloadSectionTitle")}
+                </h2>
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                     {teamSections.length === 0 ? (
                         <p className="col-span-full text-sm text-stone-500">{t("teamSectionEmpty")}</p>
                     ) : null}
@@ -238,18 +215,23 @@ export function MyPerformanceOverviewClient({
                         const bar = Math.min(100, (total / WORKLOAD_CHART_MAX_SCORE) * 100);
                         const displayName =
                             section.id === "__personal__" ? tm("personalProject") : section.name;
-                        const activeMine = activeAssignedTopLevelCount(section.items, currentUserId);
-                        const wsCount = section.items.length;
+                        const isSelected = selectedTeamId === section.id;
 
                         return (
-                            <div
+                            <button
                                 key={section.id}
-                                className="rounded-2xl border border-stone-200 bg-stone-50/40 p-4 shadow-sm"
+                                type="button"
+                                onClick={() =>
+                                    onSelectTeam(selectedTeamId === section.id ? null : section.id)
+                                }
+                                className={[
+                                    "rounded-2xl border p-4 text-left shadow-sm transition-colors",
+                                    isSelected
+                                        ? "border-stone-800 bg-stone-50 ring-2 ring-stone-800/20"
+                                        : "border-stone-200 bg-stone-50/40 hover:border-stone-300",
+                                ].join(" ")}
                             >
                                 <p className="text-sm font-semibold text-stone-800">{displayName}</p>
-                                <p className="mt-0.5 text-[11px] text-stone-500">
-                                    {t("teamMeta", { workspaces: wsCount, tasks: activeMine })}
-                                </p>
                                 <div className="mt-3 flex items-center justify-between gap-2">
                                     <span className="text-lg font-bold tabular-nums text-stone-900">
                                         {Math.round(total * 10) / 10}
@@ -269,7 +251,7 @@ export function MyPerformanceOverviewClient({
                                         style={{ width: `${bar}%` }}
                                     />
                                 </div>
-                            </div>
+                            </button>
                         );
                     })}
                 </div>

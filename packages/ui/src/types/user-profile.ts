@@ -9,4 +9,6 @@ export interface UserProfile {
     avatarUrl: string | null;
     systemRole: "SUPER_ADMIN" | "USER";
     createdAt: string;
+    /** 로컬 계정만 비밀번호 변경 가능 */
+    authProvider?: "LOCAL" | "LDAP";
 }

@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 
 import type { ApiEnvelope } from "../http/api-envelope";
-import type { ApiUserProfile } from "../mappers/user";
+import type { ApiNotificationPreferences, ApiUserProfile } from "../mappers/user";
 import { apiUrl } from "../http/api-base-url";
 import { AT_COOKIE, clearSession, getRefreshToken } from "./auth.server";
 import { apiFetchHeaders } from "../http/api-auth-headers.server";
@@ -86,5 +86,25 @@ export async function updateMyProfile(data: {
         return { ok: true, user: body.data };
     } catch {
         return { ok: false, message: "네트워크 오류가 발생했습니다." };
+    }
+}
+
+/**
+ * 팀·프로젝트 알림 on/off 설정 조회
+ */
+export async function getMyNotificationPreferences(): Promise<ApiNotificationPreferences | null> {
+    const jar = await cookies();
+    if (!jar.get(AT_COOKIE)?.value) return null;
+
+    try {
+        const res = await fetch(apiUrl("/api/users/me/notification-preferences"), {
+            headers: await apiFetchHeaders(),
+            cache: "no-store",
+        });
+        const body = (await res.json().catch(() => null)) as ApiEnvelope<unknown> | null;
+        if (!res.ok || !body || body.data == null) return null;
+        return body.data as ApiNotificationPreferences;
+    } catch {
+        return null;
     }
 }

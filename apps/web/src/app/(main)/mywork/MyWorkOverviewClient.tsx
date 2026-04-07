@@ -101,6 +101,46 @@ export function computeStats(list: WorkspaceDataItem[]) {
     return { total, completed, overdue, dueSoon, pct };
 }
 
+/** 팀(또는 워크스페이스 묶음) 단위: 상위 업무 기준 집계 — 전체·완료·진행·보류·기한초과·3일 이내 마감 */
+export function computeTeamTaskMetrics(items: WorkspaceDataItem[]) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let total = 0;
+    let completed = 0;
+    let inProgress = 0;
+    let onHold = 0;
+    let overdue = 0;
+    let dueWithin3 = 0;
+
+    for (const { tasks, statuses } of items) {
+        const topTasks = tasks.filter((t) => !t.parentId);
+        for (const task of topTasks) {
+            total++;
+            const sem = statuses.find((s) => s.id === task.statusId)?.semantic;
+            if (sem === "DONE") {
+                completed++;
+                continue;
+            }
+            if (sem === "ON_HOLD") {
+                onHold++;
+            } else if (sem === "IN_PROGRESS" || sem === "REVIEW" || sem === "WAITING") {
+                inProgress++;
+            }
+
+            if (task.dueDate) {
+                const due = new Date(task.dueDate);
+                due.setHours(0, 0, 0, 0);
+                const diff = Math.round((due.getTime() - today.getTime()) / 86400000);
+                if (diff < 0) overdue++;
+                else if (diff <= 3) dueWithin3++;
+            }
+        }
+    }
+
+    return { total, completed, inProgress, onHold, overdue, dueWithin3 };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 타임라인 그룹화
 // ─────────────────────────────────────────────────────────────────────────────
@@ -649,10 +689,13 @@ export function StatsRow({ total, completed, overdue, dueSoon, pct }: ReturnType
 export function MyWorkOverviewClient({
     workspaceDataList,
     timelineOnly = false,
+    minimalChrome = false,
 }: {
     workspaceDataList: WorkspaceDataItem[];
     /** true면 상단 제목·통계만 숨기고 타임라인·토글만 표시 (전체 실적 페이지 하단용) */
     timelineOnly?: boolean;
+    /** true면 뷰 모드·완료 표시 토글 숨김 (관리자 실적 타임라인) */
+    minimalChrome?: boolean;
 }) {
     const tm = useTranslations("mywork");
     const tw = useTranslations("workspace");
@@ -726,36 +769,38 @@ export function MyWorkOverviewClient({
                 </>
             )}
 
-            {/* 뷰 모드 토글 */}
-            <div className="border-b border-stone-200 bg-white/95 px-4 py-2 sm:px-6">
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-1">
-                        {(["combined", "by-workspace"] as const).map((mode) => (
-                            <button
-                                key={mode}
-                                type="button"
-                                onClick={() => setViewMode(mode)}
-                                className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
-                                    viewMode === mode
-                                        ? "bg-stone-100 text-stone-900"
-                                        : "text-stone-500 hover:bg-stone-50 hover:text-stone-700"
-                                }`}
-                            >
-                                {mode === "combined" ? tm("viewCombined") : tm("viewByWorkspace")}
-                            </button>
-                        ))}
+            {/* 뷰 모드 토글 (관리자 실적·minimalChrome 이면 숨김) */}
+            {!(timelineOnly && minimalChrome) && (
+                <div className="border-b border-stone-200 bg-white/95 px-4 py-2 sm:px-6">
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-1">
+                            {(["combined", "by-workspace"] as const).map((mode) => (
+                                <button
+                                    key={mode}
+                                    type="button"
+                                    onClick={() => setViewMode(mode)}
+                                    className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                                        viewMode === mode
+                                            ? "bg-stone-100 text-stone-900"
+                                            : "text-stone-500 hover:bg-stone-50 hover:text-stone-700"
+                                    }`}
+                                >
+                                    {mode === "combined" ? tm("viewCombined") : tm("viewByWorkspace")}
+                                </button>
+                            ))}
+                        </div>
+                        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs text-stone-600 transition-colors hover:bg-stone-50">
+                            <input
+                                type="checkbox"
+                                className="h-3.5 w-3.5 rounded border-stone-300 accent-amber-500"
+                                checked={showCompleted}
+                                onChange={(e) => setShowCompleted(e.target.checked)}
+                            />
+                            <span>{tm("showCompletedTasks")}</span>
+                        </label>
                     </div>
-                    <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-stone-200 bg-white px-3 py-1.5 text-xs text-stone-600 transition-colors hover:bg-stone-50">
-                        <input
-                            type="checkbox"
-                            className="h-3.5 w-3.5 rounded border-stone-300 accent-amber-500"
-                            checked={showCompleted}
-                            onChange={(e) => setShowCompleted(e.target.checked)}
-                        />
-                        <span>{tm("showCompletedTasks")}</span>
-                    </label>
                 </div>
-            </div>
+            )}
 
             {/* 타임라인 본문 */}
             <div className="flex min-h-0 flex-1 flex-col overflow-y-auto bg-stone-50/40 px-4 py-5 sm:px-6">
@@ -774,11 +819,13 @@ export function MyWorkOverviewClient({
                 ) : viewMode === "combined" ? (
                     /* ── 전체 타임라인 (좌측 정렬, full width) ── */
                     <div className="w-full">
-                        <p className="mb-4 text-xs font-medium text-stone-400">
-                            {tm("totalTasksLine", {
-                                count: allEnrichedTasks.filter((t) => !t.parentId).length,
-                            })}
-                        </p>
+                        {!minimalChrome && (
+                            <p className="mb-4 text-xs font-medium text-stone-400">
+                                {tm("totalTasksLine", {
+                                    count: allEnrichedTasks.filter((t) => !t.parentId).length,
+                                })}
+                            </p>
+                        )}
                         <TimelineView
                             tasks={allEnrichedTasks}
                             onSelectTask={handleSelectTask}

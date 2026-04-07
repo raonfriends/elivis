@@ -1,27 +1,32 @@
 "use client";
 
-import { useActionState, useRef, useState, useTransition } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 
-import { getApiBaseUrl } from "@/lib/http/api-base-url";
-import type { UserProfile } from "@/lib/user/user-types";
 import {
+    changePasswordAction,
     deleteAvatarAction,
+    patchNotificationPreferencesAction,
     updateProfileAction,
     updateStatusAction,
     uploadAvatarAction,
+    type ChangePasswordState,
     type UpdateProfileState,
 } from "@/app/actions/users";
+import { getApiBaseUrl } from "@/lib/http/api-base-url";
+import type { ApiNotificationPreferences } from "@/lib/mappers/user";
+import type { UserProfile } from "@/lib/user/user-types";
 import { StatusDropdown } from "@repo/ui";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 타입
 // ─────────────────────────────────────────────────────────────────────────────
 
-type Tab = "profile" | "security" | "notifications" | "integrations";
+type Tab = "profile" | "security" | "preferences";
 
 interface SettingsClientProps {
     user: UserProfile | null;
+    notificationPrefs: ApiNotificationPreferences | null;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -337,11 +342,229 @@ function ProfileTab({ user }: { user: UserProfile | null }) {
     );
 }
 
-function ComingSoonTab() {
-    const t = useTranslations("settings");
+function inputClassName(): string {
+    return "mt-1.5 w-full rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 outline-none transition placeholder:text-stone-300 focus:border-stone-400 focus:ring-2 focus:ring-stone-100";
+}
+
+function SecurityTab({ user }: { user: UserProfile | null }) {
+    const t = useTranslations("settings.securityAccount");
+    const initial: ChangePasswordState = {};
+    const [state, action, isPending] = useActionState(changePasswordAction, initial);
+
+    if (user?.authProvider === "LDAP") {
+        return <p className="text-sm text-stone-600">{t("ldapOnly")}</p>;
+    }
+
     return (
-        <div className="flex h-64 items-center justify-center rounded-2xl border border-dashed border-stone-200 bg-stone-50/60">
-            <p className="text-sm text-stone-400">{t("comingSoon")}</p>
+        <div className="max-w-md space-y-5">
+            <h2 className="text-base font-semibold text-stone-800">{t("title")}</h2>
+            <form action={action} className="space-y-4">
+                <div className="space-y-1.5">
+                    <label htmlFor="currentPassword" className="block text-sm font-medium text-stone-700">
+                        {t("current")}
+                    </label>
+                    <input
+                        id="currentPassword"
+                        name="currentPassword"
+                        type="password"
+                        autoComplete="current-password"
+                        required
+                        className={inputClassName()}
+                    />
+                </div>
+                <div className="space-y-1.5">
+                    <label htmlFor="newPassword" className="block text-sm font-medium text-stone-700">
+                        {t("new")}
+                    </label>
+                    <input
+                        id="newPassword"
+                        name="newPassword"
+                        type="password"
+                        autoComplete="new-password"
+                        required
+                        minLength={8}
+                        className={inputClassName()}
+                    />
+                </div>
+                <div className="space-y-1.5">
+                    <label htmlFor="confirmPassword" className="block text-sm font-medium text-stone-700">
+                        {t("confirm")}
+                    </label>
+                    <input
+                        id="confirmPassword"
+                        name="confirmPassword"
+                        type="password"
+                        autoComplete="new-password"
+                        required
+                        minLength={8}
+                        className={inputClassName()}
+                    />
+                </div>
+                {state.error && (
+                    <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{state.error}</p>
+                )}
+                {state.success && (
+                    <p className="rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-600">
+                        {t("success")}
+                    </p>
+                )}
+                <button
+                    type="submit"
+                    disabled={isPending}
+                    className="rounded-lg bg-stone-800 px-5 py-2 text-sm font-medium text-white transition hover:bg-stone-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                    {isPending ? t("submitting") : t("submit")}
+                </button>
+            </form>
+        </div>
+    );
+}
+
+function PreferencesTab({ initial }: { initial: ApiNotificationPreferences | null }) {
+    const t = useTranslations("settings.preferences");
+    const [teams, setTeams] = useState(() => initial?.teams ?? []);
+    const [projects, setProjects] = useState(() => initial?.projects ?? []);
+    const [error, setError] = useState<string | null>(null);
+    const [pending, startTransition] = useTransition();
+
+    useEffect(() => {
+        setTeams(initial?.teams ?? []);
+        setProjects(initial?.projects ?? []);
+    }, [initial]);
+
+    if (!initial) {
+        return <p className="text-sm text-red-500">{t("loadError")}</p>;
+    }
+
+    function applyServerData(data: ApiNotificationPreferences) {
+        setTeams(data.teams);
+        setProjects(data.projects);
+    }
+
+    function toggleTeam(id: string, notifyEnabled: boolean) {
+        const snapT = teams;
+        const snapP = projects;
+        setTeams((rows) => rows.map((r) => (r.id === id ? { ...r, notifyEnabled } : r)));
+        setError(null);
+        startTransition(async () => {
+            const r = await patchNotificationPreferencesAction({
+                teams: [{ teamId: id, notifyEnabled }],
+            });
+            if (!r.ok) {
+                setTeams(snapT);
+                setProjects(snapP);
+                setError(r.message);
+                return;
+            }
+            applyServerData(r.data);
+        });
+    }
+
+    function toggleProject(id: string, notifyEnabled: boolean) {
+        const snapT = teams;
+        const snapP = projects;
+        setProjects((rows) => rows.map((r) => (r.id === id ? { ...r, notifyEnabled } : r)));
+        setError(null);
+        startTransition(async () => {
+            const r = await patchNotificationPreferencesAction({
+                projects: [{ projectId: id, notifyEnabled }],
+            });
+            if (!r.ok) {
+                setTeams(snapT);
+                setProjects(snapP);
+                setError(r.message);
+                return;
+            }
+            applyServerData(r.data);
+        });
+    }
+
+    return (
+        <div className="space-y-8">
+            <p className="text-sm text-stone-600">{t("intro")}</p>
+            {error && (
+                <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-500">{error}</p>
+            )}
+            <section>
+                <h2 className="mb-3 text-base font-semibold text-stone-800">{t("teamsTitle")}</h2>
+                {teams.length === 0 ? (
+                    <p className="text-sm text-stone-400">{t("emptyTeams")}</p>
+                ) : (
+                    <ul className="divide-y divide-stone-100 rounded-xl border border-stone-200">
+                        {teams.map((row) => (
+                            <li
+                                key={row.id}
+                                className="flex items-center justify-between gap-3 px-4 py-3"
+                            >
+                                <span className="min-w-0 truncate text-sm text-stone-800">
+                                    {row.name}
+                                </span>
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={row.notifyEnabled}
+                                    disabled={pending}
+                                    aria-label={
+                                        row.notifyEnabled ? t("notifyOn") : t("notifyOff")
+                                    }
+                                    onClick={() => toggleTeam(row.id, !row.notifyEnabled)}
+                                    className={[
+                                        "relative h-7 w-12 shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 disabled:opacity-50",
+                                        row.notifyEnabled ? "bg-emerald-600" : "bg-stone-300",
+                                    ].join(" ")}
+                                >
+                                    <span
+                                        className={[
+                                            "absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform",
+                                            row.notifyEnabled ? "left-5" : "left-0.5",
+                                        ].join(" ")}
+                                    />
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </section>
+            <section>
+                <h2 className="mb-3 text-base font-semibold text-stone-800">{t("projectsTitle")}</h2>
+                {projects.length === 0 ? (
+                    <p className="text-sm text-stone-400">{t("emptyProjects")}</p>
+                ) : (
+                    <ul className="divide-y divide-stone-100 rounded-xl border border-stone-200">
+                        {projects.map((row) => (
+                            <li
+                                key={row.id}
+                                className="flex items-center justify-between gap-3 px-4 py-3"
+                            >
+                                <span className="min-w-0 truncate text-sm text-stone-800">
+                                    {row.name}
+                                </span>
+                                <button
+                                    type="button"
+                                    role="switch"
+                                    aria-checked={row.notifyEnabled}
+                                    disabled={pending}
+                                    aria-label={
+                                        row.notifyEnabled ? t("notifyOn") : t("notifyOff")
+                                    }
+                                    onClick={() => toggleProject(row.id, !row.notifyEnabled)}
+                                    className={[
+                                        "relative h-7 w-12 shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-stone-400 disabled:opacity-50",
+                                        row.notifyEnabled ? "bg-emerald-600" : "bg-stone-300",
+                                    ].join(" ")}
+                                >
+                                    <span
+                                        className={[
+                                            "absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform",
+                                            row.notifyEnabled ? "left-5" : "left-0.5",
+                                        ].join(" ")}
+                                    />
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </section>
         </div>
     );
 }
@@ -362,14 +585,9 @@ const TABS: { id: Tab; labelKey: string; icon: string }[] = [
         icon: "M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z",
     },
     {
-        id: "notifications",
-        labelKey: "tabs.notifications",
-        icon: "M14.857 17.082a23.848 23.848 0 0 0 5.454-1.31A8.967 8.967 0 0 1 18 9.75V9A6 6 0 0 0 6 9v.75a8.967 8.967 0 0 1-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 0 1-5.714 0m5.714 0a3 3 0 1 1-5.714 0",
-    },
-    {
-        id: "integrations",
-        labelKey: "tabs.integrations",
-        icon: "M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244",
+        id: "preferences",
+        labelKey: "tabs.preferences",
+        icon: "M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.132a1.125 1.125 0 0 1-.26 1.243l-1.066 1.06c-.265.263-.37.665-.252 1.03.015.044.03.088.043.133.12.375.073.779-.127 1.091-.058.09-.122.183-.19.273-.24.332-.655.56-1.11.56h-2.593c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.063-.374-.313-.686-.645-.87-.074-.04-.147-.083-.22-.127-.324-.196-.72-.257-1.075-.124l-1.217.456a1.125 1.125 0 0 1-1.184-.29L4.69 9.992a1.125 1.125 0 0 1-.026-1.43l1.034-1.17a1.125 1.125 0 0 1 1.652-.755l1.285-.471c.356-.133.75-.072 1.075.124.073.044.146.087.22.127.332.184.582.496.645.87l.213 1.281ZM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z",
     },
 ];
 
@@ -377,7 +595,7 @@ const TABS: { id: Tab; labelKey: string; icon: string }[] = [
 // 메인 컴포넌트
 // ─────────────────────────────────────────────────────────────────────────────
 
-export function SettingsClient({ user }: SettingsClientProps) {
+export function SettingsClient({ user, notificationPrefs }: SettingsClientProps) {
     const [activeTab, setActiveTab] = useState<Tab>("profile");
     const t = useTranslations("settings");
 
@@ -468,7 +686,13 @@ export function SettingsClient({ user }: SettingsClientProps) {
 
                 {/* 콘텐츠 영역 */}
                 <div className="min-w-0 flex-1 rounded-2xl border border-stone-200/80 bg-white p-5 shadow-sm sm:p-7">
-                    {activeTab === "profile" ? <ProfileTab user={user} /> : <ComingSoonTab />}
+                    {activeTab === "profile" ? (
+                        <ProfileTab user={user} />
+                    ) : activeTab === "security" ? (
+                        <SecurityTab user={user} />
+                    ) : (
+                        <PreferencesTab initial={notificationPrefs} />
+                    )}
                 </div>
             </div>
         </div>

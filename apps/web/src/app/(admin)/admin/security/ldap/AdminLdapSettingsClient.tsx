@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import {
@@ -66,35 +66,20 @@ export function AdminLdapSettingsClient({ initial }: { initial: ApiAdminAuthSett
         setHasBindPassword(l.hasBindPassword);
     }, [initial]);
 
-    const dirty = useMemo(() => {
-        const l0 = initial.ldap;
-        const tm = Number.parseInt(timeoutMs, 10);
-        const tmOk = Number.isFinite(tm) ? tm : l0.timeoutMs;
-        return (
-            enabled !== l0.enabled ||
-            url.trim() !== l0.url.trim() ||
-            userDnTemplate.trim() !== l0.userDnTemplate.trim() ||
-            bindDn.trim() !== l0.bindDn.trim() ||
-            searchBase.trim() !== l0.searchBase.trim() ||
-            searchFilter.trim() !== l0.searchFilter.trim() ||
-            nameAttribute.trim() !== l0.nameAttribute.trim() ||
-            tmOk !== l0.timeoutMs ||
-            bindPass.trim().length > 0 ||
-            clearBindPass
-        );
-    }, [
-        initial.ldap,
-        enabled,
-        url,
-        userDnTemplate,
-        bindDn,
-        searchBase,
-        searchFilter,
-        nameAttribute,
-        timeoutMs,
-        bindPass,
-        clearBindPass,
-    ]);
+    const l0 = initial.ldap;
+    const tmParsed = Number.parseInt(timeoutMs, 10);
+    const tmOk = Number.isFinite(tmParsed) ? tmParsed : l0.timeoutMs;
+    const dirty =
+        enabled !== l0.enabled ||
+        url.trim() !== l0.url.trim() ||
+        userDnTemplate.trim() !== l0.userDnTemplate.trim() ||
+        bindDn.trim() !== l0.bindDn.trim() ||
+        searchBase.trim() !== l0.searchBase.trim() ||
+        searchFilter.trim() !== l0.searchFilter.trim() ||
+        nameAttribute.trim() !== l0.nameAttribute.trim() ||
+        tmOk !== l0.timeoutMs ||
+        bindPass.trim().length > 0 ||
+        clearBindPass;
 
     const ldapTabVisible = enabled && url.trim().length > 0;
 

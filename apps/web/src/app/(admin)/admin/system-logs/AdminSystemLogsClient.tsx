@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useState } from "react";
 import { useTranslations } from "next-intl";
 
 import type { ApiSystemLogFile } from "@/lib/mappers/system-logs";
@@ -64,7 +64,7 @@ export function AdminSystemLogsClient({ files, entries, query }: AdminSystemLogs
     const router = useRouter();
     const [openRow, setOpenRow] = useState<number | null>(null);
 
-    const rows = useMemo(() => entries.map((e, i) => ({ e, i })), [entries]);
+    const rows = entries.map((e, i) => ({ e, i }));
 
     return (
         <div className="space-y-6">

@@ -4,6 +4,7 @@ import { t } from "@repo/i18n";
 
 import { MSG } from "../utils/messages";
 import { badRequest, conflict, forbidden, notFound, ok, created } from "../utils/response";
+import { shouldDeliverProjectNotification } from "../utils/notification-prefs";
 import { publishNotification } from "../utils/notify";
 import { recordHistory } from "../services/history.service";
 
@@ -872,15 +873,22 @@ export function createWorkspaceController(app: FastifyInstance) {
             });
             const assignerName = assigner?.name ?? assigner?.email ?? "누군가";
 
-            void publishNotification(app.redis, {
-                userId: body.assigneeId,
-                type: "TASK_ASSIGNED",
-                title: "새 업무가 할당되었습니다",
-                message: `${assignerName}님이 '${updated.title}' 업무를 할당했습니다.`,
-                data: { taskId: updated.id, workspaceId },
-            }).catch((err) =>
-                app.log.error({ err }, "Failed to publish task assignment notification"),
+            const deliverAssign = await shouldDeliverProjectNotification(
+                app.prisma,
+                body.assigneeId,
+                ws.projectId,
             );
+            if (deliverAssign) {
+                void publishNotification(app.redis, {
+                    userId: body.assigneeId,
+                    type: "TASK_ASSIGNED",
+                    title: "새 업무가 할당되었습니다",
+                    message: `${assignerName}님이 '${updated.title}' 업무를 할당했습니다.`,
+                    data: { taskId: updated.id, workspaceId },
+                }).catch((err) =>
+                    app.log.error({ err }, "Failed to publish task assignment notification"),
+                );
+            }
         }
 
         // ── 상태 변경 시 notifyOnChange 팀원 알림 ───────────────────────────
@@ -904,6 +912,12 @@ export function createWorkspaceController(app: FastifyInstance) {
                 const changerName = changer?.name ?? changer?.email ?? "누군가";
 
                 for (const member of projectMembers) {
+                    const deliverStatus = await shouldDeliverProjectNotification(
+                        app.prisma,
+                        member.userId,
+                        ws.projectId,
+                    );
+                    if (!deliverStatus) continue;
                     void publishNotification(app.redis, {
                         userId: member.userId,
                         type: "TASK_STATUS_CHANGED",

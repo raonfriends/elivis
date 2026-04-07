@@ -9,3 +9,15 @@ export type ApiUserSearchRow = {
     email: string;
     name: string | null;
 };
+
+export interface NotificationPrefRow {
+    id: string;
+    name: string;
+    notifyEnabled: boolean;
+}
+
+/** GET/PATCH /api/users/me/notification-preferences 응답 `data` */
+export type ApiNotificationPreferences = {
+    teams: NotificationPrefRow[];
+    projects: NotificationPrefRow[];
+};

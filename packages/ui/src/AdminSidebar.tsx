@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useMemo, useState, type ComponentType } from "react";
+import { useState, type ComponentType } from "react";
 import { useTranslations } from "next-intl";
 
 export type AdminSidebarSize = "expanded" | "collapsed" | "hidden";
@@ -279,29 +279,25 @@ export function AdminSidebar({ open, onClose, size, onSizeChange }: AdminSidebar
     const [collapsedGroupIds, setCollapsedGroupIds] = useState<Set<string>>(() => new Set());
 
     /** 접힘은 사용자 토글만 반영 (경로에 맞춰 강제 펼침하면 보안 등이 접히지 않음) */
-    const isGroupExpanded = useCallback(
-        (id: string) => !collapsedGroupIds.has(id),
-        [collapsedGroupIds],
-    );
+    function isGroupExpanded(id: string) {
+        return !collapsedGroupIds.has(id);
+    }
 
-    const toggleGroup = useCallback((id: string) => {
+    function toggleGroup(id: string) {
         setCollapsedGroupIds((prev) => {
             const next = new Set(prev);
             if (next.has(id)) next.delete(id);
             else next.add(id);
             return next;
         });
-    }, []);
+    }
 
-    const groupChildActive = useMemo(() => {
-        const map: Record<string, boolean> = {};
-        for (const item of adminNavStructure) {
-            if (item.kind === "group") {
-                map[item.id] = item.children.some((c) => leafIsActive(pathname, c.href));
-            }
+    const groupChildActive: Record<string, boolean> = {};
+    for (const item of adminNavStructure) {
+        if (item.kind === "group") {
+            groupChildActive[item.id] = item.children.some((c) => leafIsActive(pathname, c.href));
         }
-        return map;
-    }, [pathname]);
+    }
 
     return (
         <>
