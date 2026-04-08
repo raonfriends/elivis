@@ -402,6 +402,16 @@ export const en = {
         intro: {
           messageTitle: "Intro message",
           messageEmpty: "No intro message.",
+          dashboard: {
+            heroBadge: "Intro",
+            asideAria: "Team summary",
+            projectsHint: "Projects linked to this team.",
+            publicMembersSummary:
+              "Detailed roster (names, emails, join dates) is only visible to team members.",
+            recentMembersPreview: "Showing a few members by most recent join.",
+            openMembersTab: "View all",
+            openMembersTabAria: "Open the Members tab for the full roster",
+          },
           sortableDragAria: "Drag to reorder",
           layoutEdit: {
             toggle: "Edit layout",

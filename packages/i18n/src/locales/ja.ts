@@ -400,6 +400,16 @@ export const ja = {
         intro: {
           messageTitle: "紹介メッセージ",
           messageEmpty: "紹介メッセージがありません。",
+          dashboard: {
+            heroBadge: "紹介",
+            asideAria: "チーム概要",
+            projectsHint: "このチームに紐づくプロジェクト数です。",
+            publicMembersSummary:
+              "メンバー以外には、氏名・メール・参加日を含む詳細な名簿は表示されません。",
+            recentMembersPreview: "最近参加した順に一部のみ表示しています。",
+            openMembersTab: "もっと見る",
+            openMembersTabAria: "メンバータブで全員の一覧を開く",
+          },
           sortableDragAria: "ドラッグして並べ替え",
           layoutEdit: {
             toggle: "レイアウト変更",

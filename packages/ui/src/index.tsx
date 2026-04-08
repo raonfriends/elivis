@@ -183,5 +183,4 @@ export { TeamIntroBannerBlock } from "./team/TeamIntroBannerBlock";
 export { TeamIntroEditModal } from "./team/TeamIntroEditModal";
 export {
     TeamIntroPageContent,
-    type TeamIntroPageContentHandle,
 } from "./team/TeamIntroPageContent";

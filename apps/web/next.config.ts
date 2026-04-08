@@ -51,9 +51,9 @@ const nextIntlTurbopackAlias =
           : `./${nextIntlRelativeToApp}`;
 
 /**
- * `@repo/ui`는 기본적으로 `dist`를 가리킴. `src`만 수정하고 tsup을 돌리지 않으면
- * Next가 예전 번들을 물어 다국어·코드 변경이 브라우저에 반영되지 않음.
- * 개발·프로덕션 빌드 모두 소스 진입점을 쓰면 `transpilePackages`로 그대로 컴파일됨.
+ * `@repo/ui`·`@repo/i18n`은 패키지 `main`이 `dist`를 가리킴. `src`만 고치고 빌드를 안 하면
+ * Next가 예전 산출물을 물어 다국어·코드 변경이 브라우저에 반영되지 않음.
+ * 소스 진입점을 쓰면 `transpilePackages`로 그대로 컴파일됨.
  */
 const repoUiSrcAbs = path.join(webAppRoot, "../../packages/ui/src/index.tsx");
 const repoUiSrcRelative = path
@@ -62,6 +62,14 @@ const repoUiSrcRelative = path
 const repoUiTurbopackAlias = repoUiSrcRelative.startsWith(".")
     ? repoUiSrcRelative
     : `./${repoUiSrcRelative}`;
+
+const repoI18nSrcAbs = path.join(webAppRoot, "../../packages/i18n/src/index.ts");
+const repoI18nSrcRelative = path
+    .relative(webAppRoot, repoI18nSrcAbs)
+    .replace(/\\/g, "/");
+const repoI18nTurbopackAlias = repoI18nSrcRelative.startsWith(".")
+    ? repoI18nSrcRelative
+    : `./${repoI18nSrcRelative}`;
 
 function serverActionBodySizeLimit() {
   const mbRaw =
@@ -77,6 +85,7 @@ const nextConfig: NextConfig = {
     resolveAlias: {
       "next-intl": nextIntlTurbopackAlias,
       "@repo/ui": repoUiTurbopackAlias,
+      "@repo/i18n": repoI18nTurbopackAlias,
     },
   },
   webpack: (config) => {
@@ -85,6 +94,7 @@ const nextConfig: NextConfig = {
       ...(config.resolve.alias as Record<string, string | false | string[] | undefined>),
       "next-intl": nextIntlWebpackAlias,
       "@repo/ui": repoUiSrcAbs,
+      "@repo/i18n": repoI18nSrcAbs,
     };
     return config;
   },

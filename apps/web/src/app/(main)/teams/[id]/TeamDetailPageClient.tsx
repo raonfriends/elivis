@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useLocale, useTranslations } from "next-intl";
 
 import {
@@ -13,7 +13,6 @@ import {
     TeamIntroBannerBlock,
     TeamIntroEditModal,
     TeamIntroPageContent,
-    type TeamIntroPageContentHandle,
     TeamFavoriteButton,
     TeamPublicDetailView,
     TeamSecuritySection,
@@ -99,8 +98,6 @@ export function TeamDetailPageClient({
     const [memberModalOpen, setMemberModalOpen] = useState(false);
     const [composeChangeOpen, setComposeChangeOpen] = useState(false);
     const [introEditOpen, setIntroEditOpen] = useState(false);
-    const introRef = useRef<TeamIntroPageContentHandle | null>(null);
-    const [introLayoutEditMode, setIntroLayoutEditMode] = useState(false);
     const [settingsSubTab, setSettingsSubTab] = useState<TeamSettingsSubTab>("team");
     const [nameDraft, setNameDraft] = useState(team.name);
     const [nameError, setNameError] = useState<string | null>(null);
@@ -136,13 +133,6 @@ export function TeamDetailPageClient({
         }
     }, [activeTab, team.viewerRole, isSuperAdmin]);
 
-    useEffect(() => {
-        if (team.viewerRole === null) return;
-        if (activeTab !== "intro") {
-            introRef.current?.exitLayoutEditMode();
-        }
-    }, [activeTab, team.viewerRole]);
-
     const memberUserIds = team.members.map((m) => m.user.id);
 
     const stackMembers = team.members.map((m) => ({
@@ -160,8 +150,6 @@ export function TeamDetailPageClient({
                 isFavorite={isFavorite}
                 onBackToTeams={() => router.push("/teams")}
                 bannerActions={teamBannerActionsForUi}
-                updateTeamFields={updateTeamFieldsAction}
-                onAfterTeamFieldsMutation={() => router.refresh()}
                 onAddFavorite={() => addTeamFavoriteAction(team.id)}
                 onRemoveFavorite={() => removeTeamFavoriteAction(team.id)}
             />
@@ -333,64 +321,7 @@ export function TeamDetailPageClient({
                         ))}
                     </nav>
 
-                    {/* PC/Tablet: 탭 우측 작은 버튼들 */}
-                    {isLeader && activeTab === "intro" ? (
-                        <div className="hidden sm:flex items-center gap-2 pb-2">
-                            <button
-                                type="button"
-                                onClick={() => introRef.current?.toggleLayoutEditMode()}
-                                className={[
-                                    "inline-flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs font-medium shadow-sm transition-colors",
-                                    introLayoutEditMode
-                                        ? "border-amber-300 bg-amber-50 text-amber-900"
-                                        : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50",
-                                ].join(" ")}
-                                aria-pressed={introLayoutEditMode}
-                            >
-                                <svg
-                                    className="h-4 w-4"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    strokeWidth={1.5}
-                                    stroke="currentColor"
-                                    aria-hidden
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25A2.25 2.25 0 0113.5 8.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25v-2.25z"
-                                    />
-                                </svg>
-                                {t("intro.layoutEdit.toggle")}
-                            </button>
-
-                            {introLayoutEditMode ? (
-                                <button
-                                    type="button"
-                                    onClick={() => introRef.current?.openLayoutSettingsPanel()}
-                                    className="inline-flex items-center gap-2 rounded-md border border-stone-200 bg-white px-2.5 py-1.5 text-xs font-medium text-stone-700 shadow-sm transition-colors hover:bg-stone-50"
-                                >
-                                    <svg
-                                        className="h-4 w-4"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        strokeWidth={1.5}
-                                        stroke="currentColor"
-                                        aria-hidden
-                                    >
-                                        <path
-                                            strokeLinecap="round"
-                                            strokeLinejoin="round"
-                                            d="M10.5 6h9.75M10.5 18h9.75M3.75 6h4.5m-4.5 4.5h4.5m-4.5 4.5h4.5m-4.5 4.5h4.5"
-                                        />
-                                    </svg>
-                                    {t("intro.layoutEdit.openSettings")}
-                                </button>
-                            ) : null}
-                        </div>
-                    ) : (
-                        <span className="hidden sm:block pb-2" aria-hidden />
-                    )}
+                    <span className="hidden sm:block pb-2" aria-hidden />
                 </div>
             </div>
 
@@ -504,13 +435,7 @@ export function TeamDetailPageClient({
 
                 {activeTab === "intro" && (
                     <div className="space-y-6">
-                        <TeamIntroPageContent
-                            ref={introRef}
-                            team={team}
-                            onLayoutEditModeChange={setIntroLayoutEditMode}
-                            updateTeamFields={updateTeamFieldsAction}
-                            onAfterTeamFieldsMutation={() => router.refresh()}
-                        />
+                        <TeamIntroPageContent team={team} onOpenMembersTab={() => setActiveTab("members")} />
                     </div>
                 )}
 
@@ -1052,63 +977,6 @@ export function TeamDetailPageClient({
                 </>
             )}
 
-            {/* Mobile: 우측 하단 플로팅 버튼 */}
-            {isLeader && activeTab === "intro" ? (
-                <>
-                    {introLayoutEditMode ? (
-                        <button
-                            type="button"
-                            onClick={() => introRef.current?.openLayoutSettingsPanel()}
-                            className="fixed bottom-20 right-6 z-40 inline-flex h-11 w-11 items-center justify-center rounded-full border border-stone-200 bg-white text-stone-700 shadow-lg transition-colors hover:bg-stone-50 sm:hidden"
-                            aria-label={t("intro.layoutEdit.openSettings")}
-                        >
-                            <svg
-                                className="h-5 w-5"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                strokeWidth={1.5}
-                                stroke="currentColor"
-                                aria-hidden
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    d="M10.5 6h9.75M10.5 18h9.75M3.75 6h4.5m-4.5 4.5h4.5m-4.5 4.5h4.5m-4.5 4.5h4.5"
-                                />
-                            </svg>
-                        </button>
-                    ) : null}
-                    <button
-                        type="button"
-                        onClick={() => introRef.current?.toggleLayoutEditMode()}
-                        className={[
-                            "fixed bottom-6 right-6 z-40 inline-flex h-12 w-12 items-center justify-center rounded-full border shadow-lg transition-colors sm:hidden",
-                            introLayoutEditMode
-                                ? "border-amber-300 bg-amber-50 text-amber-900"
-                                : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50",
-                        ].join(" ")}
-                        aria-label={
-                            introLayoutEditMode ? t("intro.layoutEdit.toggleOffAria") : t("intro.layoutEdit.toggleOnAria")
-                        }
-                        aria-pressed={introLayoutEditMode}
-                    >
-                        <svg
-                            className="h-5 w-5"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            strokeWidth={1.5}
-                            stroke="currentColor"
-                            aria-hidden
-                        >
-                            <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25A2.25 2.25 0 0113.5 8.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25v-2.25z"
-                            />
-                        </svg>
-                    </button>
-                </>
-            ) : null}
         </div>
     );
 }

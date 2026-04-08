@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 
-import type { TeamBannerActions, UpdateTeamFieldsFn } from "../../types/team-fields-actions";
+import type { TeamBannerActions } from "../../types/team-fields-actions";
 import type { TeamDetail } from "../../types/team-detail";
 import { TeamFavoriteButton } from "../../TeamFavoriteButton";
 import { TeamIntroBannerBlock } from "../TeamIntroBannerBlock";
@@ -13,8 +13,6 @@ export function TeamPublicDetailView({
     isFavorite,
     onBackToTeams,
     bannerActions,
-    updateTeamFields,
-    onAfterTeamFieldsMutation,
     onAddFavorite,
     onRemoveFavorite,
 }: {
@@ -22,8 +20,6 @@ export function TeamPublicDetailView({
     isFavorite: boolean;
     onBackToTeams: () => void;
     bannerActions: TeamBannerActions;
-    updateTeamFields: UpdateTeamFieldsFn;
-    onAfterTeamFieldsMutation: () => void;
     onAddFavorite: () => Promise<{ ok: boolean; message?: string }>;
     onRemoveFavorite: () => Promise<{ ok: boolean; message?: string }>;
 }) {
@@ -89,11 +85,7 @@ export function TeamPublicDetailView({
             </div>
 
             <div className="min-h-0 flex-1 p-4 sm:p-5 md:p-6">
-                <TeamIntroPageContent
-                    team={team}
-                    updateTeamFields={updateTeamFields}
-                    onAfterTeamFieldsMutation={onAfterTeamFieldsMutation}
-                />
+                <TeamIntroPageContent team={team} showFullRoster={false} />
             </div>
         </div>
     );

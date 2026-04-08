@@ -404,6 +404,16 @@ export const ko = {
                 intro: {
                     messageTitle: "팀 소개 메시지",
                     messageEmpty: "등록된 소개 메시지가 없습니다.",
+                    dashboard: {
+                        heroBadge: "소개",
+                        asideAria: "팀 요약 정보",
+                        projectsHint: "이 팀에 연결된 프로젝트 수입니다.",
+                        publicMembersSummary:
+                            "멤버가 아닌 경우 이름·이메일·참여일이 있는 상세 목록은 표시되지 않습니다.",
+                        recentMembersPreview: "최근 참여 순으로 일부만 표시합니다.",
+                        openMembersTab: "자세히",
+                        openMembersTabAria: "팀원 탭에서 전체 명단 보기",
+                    },
                     sortableDragAria: "드래그하여 순서 변경",
                     layoutEdit: {
                         toggle: "레이아웃 변경",
