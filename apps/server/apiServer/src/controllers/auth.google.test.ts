@@ -9,18 +9,21 @@ const {
     mockConsumeGoogleAuthorization,
     mockGenerateAccessToken,
     mockGenerateRefreshToken,
+    mockGetGoogleOidcConfig,
 } = vi.hoisted(() => ({
     mockAssertGoogleOidcAvailable: vi.fn(),
     mockCreateGoogleAuthorizationRequest: vi.fn(),
     mockConsumeGoogleAuthorization: vi.fn(),
     mockGenerateAccessToken: vi.fn(),
     mockGenerateRefreshToken: vi.fn(),
+    mockGetGoogleOidcConfig: vi.fn(),
 }));
 
 vi.mock("../services/google-oidc.service", () => ({
     assertGoogleOidcAvailable: mockAssertGoogleOidcAvailable,
     createGoogleAuthorizationRequest: mockCreateGoogleAuthorizationRequest,
     consumeGoogleAuthorization: mockConsumeGoogleAuthorization,
+    getGoogleOidcConfig: mockGetGoogleOidcConfig,
     isGoogleOidcAvailable: vi.fn(),
 }));
 
@@ -161,6 +164,7 @@ beforeEach(() => {
         issuer: "https://accounts.google.com",
         scopes: ["openid", "email", "profile"],
     });
+    mockGetGoogleOidcConfig.mockReturnValue({ enabled: true });
     mockCreateGoogleAuthorizationRequest.mockReturnValue({
         authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth?state=state-1",
         state: "state-1",
@@ -193,9 +197,22 @@ describe("auth google route wiring", () => {
 });
 
 describe("createAuthController google flow", () => {
-    it("rejects google start when OIDC is unavailable", async () => {
+    it("returns 404 when google auth is disabled", async () => {
+        mockGetGoogleOidcConfig.mockReturnValue({ enabled: false });
+        const { app, redis } = createApp({ superAdminCount: 0 });
+        const controller = createAuthController(app as never);
+        const reply = createReply();
+
+        await controller.googleStart({ lang: "en" } as never, reply as never);
+
+        expect(mockAssertGoogleOidcAvailable).not.toHaveBeenCalled();
+        expect(reply.statusCode).toBe(404);
+        expect(redis.store.size).toBe(0);
+    });
+
+    it("keeps other google start unavailability as 503", async () => {
         mockAssertGoogleOidcAvailable.mockImplementation(() => {
-            throw new Error("Google OIDC is not enabled.");
+            throw new Error("Google OIDC requires an existing super admin.");
         });
         const { app, redis } = createApp({ superAdminCount: 0 });
         const controller = createAuthController(app as never);
@@ -431,7 +448,7 @@ describe("createAuthController google flow", () => {
         );
 
         expect(reply.statusCode).toBe(200);
-        expect(reply.payload).toMatchObject({ data: completePayload });
+        expect(reply.payload).toEqual(completePayload);
 
         const secondReply = createReply();
         await controller.googleComplete(

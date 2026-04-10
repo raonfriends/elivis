@@ -15,6 +15,7 @@ import {
     assertGoogleOidcAvailable,
     consumeGoogleAuthorization,
     createGoogleAuthorizationRequest,
+    getGoogleOidcConfig,
 } from "../services/google-oidc.service";
 import { authenticateLdap } from "../services/ldap.service";
 import {
@@ -34,6 +35,7 @@ import {
     forbidden,
     forbiddenAccessBlocked,
     noContent,
+    notFound,
     ok,
     serviceUnavailable,
     unauthorized,
@@ -211,6 +213,11 @@ export function createAuthController(app: FastifyInstance) {
 
     async function googleStart(request: FastifyRequest, reply: FastifyReply) {
         const superAdminExists = (await app.prisma.user.count({ where: { systemRole: "SUPER_ADMIN" } })) > 0;
+        const googleOidcConfig = getGoogleOidcConfig();
+
+        if (!googleOidcConfig.enabled) {
+            return reply.code(404).send(notFound(t(request.lang, MSG.AUTH_GOOGLE_UNAVAILABLE)));
+        }
 
         try {
             const config = assertGoogleOidcAvailable(superAdminExists);
@@ -361,7 +368,7 @@ export function createAuthController(app: FastifyInstance) {
             return reply.code(401).send(unauthorized(t(lang, MSG.AUTH_GOOGLE_TICKET_INVALID)));
         }
 
-        return reply.send(ok(payload, t(lang, MSG.AUTH_LOGIN)));
+        return reply.send(payload);
     }
 
     async function signup(request: FastifyRequest<{ Body: SignupBody }>, reply: FastifyReply) {
