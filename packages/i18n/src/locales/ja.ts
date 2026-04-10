@@ -241,6 +241,7 @@ export const ja = {
       passwordLabel:       "パスワード",
       passwordPlaceholder: "パスワードを入力してください",
       loginButton:         "ログイン",
+      googleLoginButton:   "Google で続行",
       loggingIn:           "ログイン中…",
       rememberEmail:       "メールアドレスを保存",
       emailRequired:       "メールアドレスとパスワードを入力してください。",

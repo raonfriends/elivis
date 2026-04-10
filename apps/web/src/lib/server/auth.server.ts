@@ -13,6 +13,13 @@ import { apiUrl } from "../http/api-base-url";
 export const AT_COOKIE = "elivis_at"; // Access Token  (1일)
 export const RT_COOKIE = "elivis_rt"; // Refresh Token (15일)
 
+export class GoogleLoginBlockedError extends Error {
+    constructor(public readonly reason: string | null) {
+        super("Google login is blocked.");
+        this.name = "GoogleLoginBlockedError";
+    }
+}
+
 const COOKIE_BASE = {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
@@ -115,9 +122,26 @@ export async function completeGoogleLogin(ticket: string): Promise<void> {
         cache: "no-store",
     });
 
-    const body = (await res.json().catch(() => ({}))) as Partial<ApiAuthLoginData> & { message?: string };
+    const body = (await res.json().catch(() => ({}))) as {
+        accessToken?: string;
+        refreshToken?: string;
+        message?: string;
+        data?: {
+            accessBlocked?: boolean;
+            accessBlockReason?: string | null;
+        } | null;
+    };
 
     if (!res.ok) {
+        if (
+            res.status === 403 &&
+            "data" in body &&
+            body.data &&
+            typeof body.data === "object" &&
+            body.data.accessBlocked === true
+        ) {
+            throw new GoogleLoginBlockedError(body.data.accessBlockReason?.trim() || null);
+        }
         throw new Error(body.message ?? "Google sign-in failed.");
     }
 

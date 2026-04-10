@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { apiUrl } from "@/lib/http/api-base-url";
+
 const { mockCookies } = vi.hoisted(() => ({
     mockCookies: vi.fn(),
 }));
@@ -46,7 +48,7 @@ describe("GET /auth/google/callback", () => {
 
         const response = await GET(new Request("http://localhost:3000/auth/google/callback?ticket=ticket-123"));
 
-        expect(global.fetch).toHaveBeenCalledWith("http://localhost:4000/api/auth/google/complete", {
+        expect(global.fetch).toHaveBeenCalledWith(apiUrl("/api/auth/google/complete"), {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -107,5 +109,55 @@ describe("GET /auth/google/callback", () => {
         expect(response.headers.get("location")).toBe(
             "http://localhost:3000/login?error=Google+ticket+is+invalid.",
         );
+    });
+
+    it("redirects blocked Google users into the suspended-account flow", async () => {
+        vi.mocked(global.fetch).mockResolvedValue(
+            new Response(
+                JSON.stringify({
+                    message: "Account access is blocked.",
+                    data: {
+                        accessBlocked: true,
+                        accessBlockReason: "policy",
+                    },
+                }),
+                {
+                    status: 403,
+                    headers: { "Content-Type": "application/json" },
+                },
+            ),
+        );
+
+        const response = await GET(new Request("http://localhost:3000/auth/google/callback?ticket=blocked-ticket"));
+
+        expect(cookieStore.set).not.toHaveBeenCalled();
+        expect(response.status).toBe(307);
+        expect(response.headers.get("location")).toBe(
+            "http://localhost:3000/account-suspended?reason=policy",
+        );
+    });
+
+    it("redirects blocked Google users without a reason to the suspended-account page", async () => {
+        vi.mocked(global.fetch).mockResolvedValue(
+            new Response(
+                JSON.stringify({
+                    message: "Account access is blocked.",
+                    data: {
+                        accessBlocked: true,
+                        accessBlockReason: null,
+                    },
+                }),
+                {
+                    status: 403,
+                    headers: { "Content-Type": "application/json" },
+                },
+            ),
+        );
+
+        const response = await GET(new Request("http://localhost:3000/auth/google/callback?ticket=blocked-ticket"));
+
+        expect(cookieStore.set).not.toHaveBeenCalled();
+        expect(response.status).toBe(307);
+        expect(response.headers.get("location")).toBe("http://localhost:3000/account-suspended");
     });
 });

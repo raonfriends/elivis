@@ -242,6 +242,7 @@ export const en = {
       passwordLabel:       "Password",
       passwordPlaceholder: "Enter your password",
       loginButton:         "Login",
+      googleLoginButton:   "Continue with Google",
       loggingIn:           "Logging in…",
       rememberEmail:       "Remember email",
       emailRequired:       "Please enter your email and password.",

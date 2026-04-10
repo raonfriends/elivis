@@ -246,6 +246,7 @@ export const ko = {
             passwordLabel: "비밀번호",
             passwordPlaceholder: "비밀번호를 입력하세요",
             loginButton: "로그인",
+            googleLoginButton: "Google로 계속하기",
             loggingIn: "로그인 중…",
             rememberEmail: "아이디 저장",
             emailRequired: "이메일과 비밀번호를 입력해주세요.",

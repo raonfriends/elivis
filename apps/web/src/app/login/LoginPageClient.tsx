@@ -34,6 +34,7 @@ export function LoginPageClient({
     const [rememberEmail, setRememberEmail] = useState(false);
     const [loginTab, setLoginTab] = useState<"local" | "ldap">("local");
     const [signupOpen, setSignupOpen] = useState(false);
+    const [hasSubmittedCredentials, setHasSubmittedCredentials] = useState(false);
 
     useEffect(() => {
         const pref = localStorage.getItem(REMEMBER_PREF_KEY) === "1";
@@ -49,6 +50,7 @@ export function LoginPageClient({
     }
 
     function handleSubmit() {
+        setHasSubmittedCredentials(true);
         if (rememberEmail && emailValue) {
             localStorage.setItem(SAVED_EMAIL_KEY, emailValue);
         } else {
@@ -57,7 +59,7 @@ export function LoginPageClient({
     }
 
     const loginMode = ldapEnabled ? loginTab : "local";
-    const visibleError = callbackError ?? state.error;
+    const visibleError = state.error ?? (!hasSubmittedCredentials ? callbackError : null);
     const googleLoginHref = apiUrl("/api/auth/google/start");
 
     return (
@@ -212,7 +214,7 @@ export function LoginPageClient({
                                 href={googleLoginHref}
                                 className="flex w-full items-center justify-center rounded-xl border border-stone-300 bg-white py-3 text-sm font-medium text-stone-800 transition-colors hover:border-stone-400 hover:bg-stone-50"
                             >
-                                Continue with Google
+                                {t("googleLoginButton")}
                             </a>
                         ) : null}
                     </form>

@@ -2,6 +2,22 @@ import React, { act } from "react";
 import ReactDOMClient from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { apiUrl } from "@/lib/http/api-base-url";
+
+const mockActionState = vi.hoisted(() => ({
+    state: { error: null as string | null },
+    formAction: vi.fn(),
+    isPending: false,
+}));
+
+vi.mock("react", async () => {
+    const actual = await vi.importActual<typeof import("react")>("react");
+    return {
+        ...actual,
+        useActionState: () => [mockActionState.state, mockActionState.formAction, mockActionState.isPending] as const,
+    };
+});
+
 const mockUseTranslations = vi.fn(() => (key: string) => {
     const translations: Record<string, string> = {
         emailLabel: "Email",
@@ -9,6 +25,7 @@ const mockUseTranslations = vi.fn(() => (key: string) => {
         passwordLabel: "Password",
         passwordPlaceholder: "Enter your password",
         loginButton: "Login",
+        googleLoginButton: "Continue with Google",
         loggingIn: "Logging in…",
         rememberEmail: "Remember email",
         signupButton: "Create account",
@@ -52,6 +69,9 @@ describe("LoginPageClient", () => {
         document.body.appendChild(container);
         root = ReactDOMClient.createRoot(container);
         window.localStorage.clear();
+        mockActionState.state = { error: null };
+        mockActionState.isPending = false;
+        process.env.NEXT_PUBLIC_API_URL = "https://api.example.test";
     });
 
     afterEach(() => {
@@ -60,6 +80,7 @@ describe("LoginPageClient", () => {
         });
         container.remove();
         vi.clearAllMocks();
+        delete process.env.NEXT_PUBLIC_API_URL;
     });
 
     it("hides the Google login button when googleEnabled is false", () => {
@@ -89,7 +110,7 @@ describe("LoginPageClient", () => {
             );
         });
 
-        const googleLink = container.querySelector('a[href="http://localhost:4000/api/auth/google/start"]');
+        const googleLink = container.querySelector(`a[href="${apiUrl("/api/auth/google/start")}"]`);
 
         expect(googleLink).not.toBeNull();
         expect(googleLink?.textContent).toContain("Continue with Google");
@@ -108,5 +129,30 @@ describe("LoginPageClient", () => {
         });
 
         expect(container.textContent).toContain("Google sign-in failed.");
+    });
+
+    it("lets later credential-login errors replace the initial callback error after submission", () => {
+        act(() => {
+            root.render(
+                <LoginPageClient
+                    publicSignupEnabled={false}
+                    ldapEnabled={false}
+                    googleEnabled={false}
+                    callbackError="Google sign-in failed."
+                />,
+            );
+        });
+
+        expect(container.textContent).toContain("Google sign-in failed.");
+
+        mockActionState.state = { error: "Wrong email or password." };
+        const form = container.querySelector("form");
+
+        act(() => {
+            form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+        });
+
+        expect(container.textContent).toContain("Wrong email or password.");
+        expect(container.textContent).not.toContain("Google sign-in failed.");
     });
 });
