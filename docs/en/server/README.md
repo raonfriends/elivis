@@ -86,6 +86,41 @@ Use a **single root `.env`**. Copy from `env.example`.
 
 Commented keys in **`env.example`** such as **`PUBLIC_SIGNUP_ENABLED`**, **`LDAP_*`** seed the **first** `AuthSettings` row when it is created. After that, the DB and admin UI win. See [`docs/en/admin.md`](../admin.md).
 
+### Google Workspace OIDC (optional)
+
+To expose Google sign-in in the public login UI, **all env values below must be valid** and the system must already have **at least one `SUPER_ADMIN`**. On a fresh install, create the first admin with the [setup token flow](#bootstrap-super_admin) first, then Google sign-in becomes available.
+
+| Key | Required | Description |
+|-----|----------|-------------|
+| `GOOGLE_OIDC_ENABLED` | yes | Attempts to enable Google OIDC when set to `true` / `1` / `yes` |
+| `GOOGLE_OIDC_CLIENT_ID` | yes | Google Cloud OAuth client ID |
+| `GOOGLE_OIDC_CLIENT_SECRET` | yes | Google Cloud OAuth client secret |
+| `GOOGLE_OIDC_REDIRECT_URI` | yes | API callback URL registered in Google Cloud Console. Example: `http://localhost:4000/api/auth/google/callback` |
+| `GOOGLE_OIDC_ALLOWED_DOMAINS` | yes | Allowed Google Workspace email domains, comma-separated and case-insensitive |
+| `GOOGLE_OIDC_SCOPES` | docs only | Default: `openid email profile`. The current server implementation also uses that fixed scope set |
+| `WEB_PUBLIC_URL` | yes | Base web-app URL the API redirects to after login. Example: `http://localhost:3000` → actual completion URL is `/auth/google/callback?ticket=...` |
+
+Example:
+
+```dotenv
+GOOGLE_OIDC_ENABLED=true
+GOOGLE_OIDC_CLIENT_ID=google-client-id.apps.googleusercontent.com
+GOOGLE_OIDC_CLIENT_SECRET=google-client-secret
+GOOGLE_OIDC_REDIRECT_URI=http://localhost:4000/api/auth/google/callback
+GOOGLE_OIDC_ALLOWED_DOMAINS=example.com,team.example.com
+# documented default scope
+# GOOGLE_OIDC_SCOPES=openid email profile
+WEB_PUBLIC_URL=http://localhost:3000
+```
+
+Operational notes:
+
+- `GET /api/auth/config` returns `googleEnabled: true` only when the env is complete **and** a `SUPER_ADMIN` already exists.
+- The Google button on the login page follows the same rule.
+- `GOOGLE_OIDC_ALLOWED_DOMAINS` restricts login by the Google account email domain.
+- `WEB_PUBLIC_URL` must be an absolute `http(s)` URL.
+- `/api/auth/google/start` is rejected until the first `SUPER_ADMIN` exists.
+
 ### Notification server
 
 | Key | Description |
@@ -173,6 +208,9 @@ All routes below are under the **`/api`** prefix unless noted. Methods, bodies, 
 | `GET` | `/auth/config` | Public auth config for login/signup UI (no auth) |
 | `POST` | `/auth/signup` | Sign up (`setupToken` only for first `SUPER_ADMIN`) |
 | `POST` | `/auth/login` | Log in (`body.mode`: `auto` \| `local` \| `ldap` for LDAP vs local) |
+| `GET` | `/auth/google/start` | Start Google OIDC (requires valid env + existing `SUPER_ADMIN`) |
+| `GET` | `/auth/google/callback` | Handle Google authorization code callback |
+| `POST` | `/auth/google/complete` | Complete login by exchanging a one-time ticket for access/refresh tokens |
 | `POST` | `/auth/refresh` | Refresh tokens (rotation) |
 | `POST` | `/auth/logout` | Log out current device |
 | `POST` | `/auth/logout/all` | Log out all devices (Bearer) |
@@ -346,6 +384,7 @@ curl -X POST http://localhost:4000/api/auth/signup \
 
 - Token is kept in memory; it changes on restart.
 - After the first `SUPER_ADMIN` exists, this mode is disabled.
+- Even with Google Workspace OIDC configured, the Google sign-in button stays hidden until this bootstrap step is completed.
 
 ---
 

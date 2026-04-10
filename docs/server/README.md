@@ -86,6 +86,41 @@ apps/server/
 
 `env.example`에 주석으로 있는 **`PUBLIC_SIGNUP_ENABLED`**, **`LDAP_*`** 등은 DB에 `AuthSettings` 행이 **아직 없을 때** 첫 값으로만 쓰입니다. 이후에는 관리자 UI·DB가 우선입니다. 상세는 [`docs/admin.md`](../admin.md) 참고.
 
+### Google Workspace OIDC (선택)
+
+Google 로그인을 공개 로그인 화면에 노출하려면 **아래 env가 모두 유효**해야 하고, 시스템에 **최소 1명의 `SUPER_ADMIN`이 이미 존재**해야 합니다. 즉 fresh install에서는 먼저 [Setup Token으로 첫 관리자](#초기-관리자-생성)를 만든 뒤 Google 로그인이 나타납니다.
+
+| 키 | 필수 | 설명 |
+|----|------|------|
+| `GOOGLE_OIDC_ENABLED` | 예 | `true` / `1` / `yes`일 때 Google OIDC 사용 시도 |
+| `GOOGLE_OIDC_CLIENT_ID` | 예 | Google Cloud OAuth 클라이언트 ID |
+| `GOOGLE_OIDC_CLIENT_SECRET` | 예 | Google Cloud OAuth 클라이언트 시크릿 |
+| `GOOGLE_OIDC_REDIRECT_URI` | 예 | Google Cloud Console에 등록할 API callback URL. 예: `http://localhost:4000/api/auth/google/callback` |
+| `GOOGLE_OIDC_ALLOWED_DOMAINS` | 예 | 허용할 Google Workspace 이메일 도메인 목록. 쉼표로 구분하며 대소문자는 무시 |
+| `GOOGLE_OIDC_SCOPES` | 문서용 | 기본값 `openid email profile`. 현재 서버 구현도 이 고정 scope 조합을 사용 |
+| `WEB_PUBLIC_URL` | 예 | API가 로그인 완료 후 리다이렉트할 웹 앱 기준 URL. 예: `http://localhost:3000` → 실제 완료 URL은 `/auth/google/callback?ticket=...` |
+
+예시:
+
+```dotenv
+GOOGLE_OIDC_ENABLED=true
+GOOGLE_OIDC_CLIENT_ID=google-client-id.apps.googleusercontent.com
+GOOGLE_OIDC_CLIENT_SECRET=google-client-secret
+GOOGLE_OIDC_REDIRECT_URI=http://localhost:4000/api/auth/google/callback
+GOOGLE_OIDC_ALLOWED_DOMAINS=example.com,team.example.com
+# 문서상 기본 scope
+# GOOGLE_OIDC_SCOPES=openid email profile
+WEB_PUBLIC_URL=http://localhost:3000
+```
+
+운영 메모:
+
+- `GET /api/auth/config`의 `googleEnabled`는 **env가 완전하고 `SUPER_ADMIN`이 존재할 때만** `true`가 됩니다.
+- 로그인 화면의 Google 버튼도 같은 조건에서만 표시됩니다.
+- `GOOGLE_OIDC_ALLOWED_DOMAINS`는 Google 계정 이메일 도메인을 제한합니다.
+- `WEB_PUBLIC_URL`은 절대 `http(s)` URL이어야 합니다.
+- 첫 `SUPER_ADMIN`이 아직 없으면 `/api/auth/google/start`도 거부됩니다.
+
 ### 알림 서버
 
 | 키 | 설명 |
@@ -173,6 +208,9 @@ pnpm dev:notification  # 알림 서버만 → http://localhost:4001
 | `GET` | `/auth/config` | 공개 인증 설정 (회원가입·LDAP 등 UI용, 인증 불필요) |
 | `POST` | `/auth/signup` | 회원가입 (`setupToken`은 최초 SUPER_ADMIN 전용) |
 | `POST` | `/auth/login` | 로그인 (`body.mode`: `auto` \| `local` \| `ldap` — LDAP 탭·자동 판별) |
+| `GET` | `/auth/google/start` | Google OIDC 시작 (env 유효 + 기존 `SUPER_ADMIN` 필요) |
+| `GET` | `/auth/google/callback` | Google authorization code callback 처리 |
+| `POST` | `/auth/google/complete` | one-time ticket로 기존 access/refresh 토큰 발급 완료 |
 | `POST` | `/auth/refresh` | 토큰 재발급 (Rotation) |
 | `POST` | `/auth/logout` | 현재 기기 로그아웃 |
 | `POST` | `/auth/logout/all` | 전체 기기 로그아웃 (Bearer) |
@@ -346,6 +384,7 @@ curl -X POST http://localhost:4000/api/auth/signup \
 
 - 토큰은 메모리 보관, 재시작 시 변경
 - 첫 `SUPER_ADMIN` 생성 후 이 모드는 비활성화
+- Google Workspace OIDC를 쓰더라도, **이 단계가 끝나기 전에는 Google 로그인 버튼이 나타나지 않음**
 
 ---
 

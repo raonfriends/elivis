@@ -162,12 +162,30 @@ pnpm dev
 | 알림 (Socket.IO) | http://localhost:4001 (웹은 `NEXT_PUBLIC_NOTIFICATION_URL`로 연결) |
 | 데스크톱         | Electron 창 (`pnpm dev` 시 웹 준비 후 기동)                        |
 
+### Google Workspace OIDC 로그인 (선택)
+
+Google 로그인을 쓰려면 루트 `.env`에 아래 값을 추가합니다. 자세한 설명은 [`docs/server/README.md`](docs/server/README.md#google-workspace-oidc-선택) 를 참고하세요.
+
+| 키 | 설명 |
+| --- | --- |
+| `GOOGLE_OIDC_ENABLED` | `true`일 때 Google 로그인 경로를 활성화 시도 |
+| `GOOGLE_OIDC_CLIENT_ID` | Google Cloud OAuth 클라이언트 ID |
+| `GOOGLE_OIDC_CLIENT_SECRET` | Google Cloud OAuth 클라이언트 시크릿 |
+| `GOOGLE_OIDC_REDIRECT_URI` | Google 콘솔에 등록할 API callback URL. 예: `http://localhost:4000/api/auth/google/callback` |
+| `GOOGLE_OIDC_ALLOWED_DOMAINS` | 허용할 Google Workspace 도메인 목록(쉼표 구분) |
+| `GOOGLE_OIDC_SCOPES` | 현재 기본값은 `openid email profile`이며 서버도 이 고정 scope를 사용 |
+| `WEB_PUBLIC_URL` | API가 로그인 완료 후 되돌려 보낼 웹 앱 기준 URL. 예: `http://localhost:3000` |
+
+Google 로그인 버튼은 **위 필수 env가 모두 유효하고, 첫 `SUPER_ADMIN`이 이미 생성된 뒤에만** 로그인 화면에 나타납니다.
+
 ---
 
 ## 사용 방법
 
 1. **첫 계정**  
    DB에 사용자가 없을 때만 API 서버 로그에 `SETUP TOKEN`이 출력됩니다. 그때는 회원가입 요청에 `setupToken`을 넣어 **SUPER_ADMIN**을 만듭니다. 이후 일반 사용자는 토큰 없이 가입·초대 흐름을 따릅니다. ([상세: `docs/server/README.md` — 초기 관리자](docs/server/README.md#초기-관리자-생성))
+
+   Google Workspace OIDC를 켜더라도 **첫 `SUPER_ADMIN`을 setup token으로 먼저 만든 다음**에야 Google 로그인 버튼이 노출됩니다.
 
 2. **브라우저에서 쓰기**  
    http://localhost:3000 에서 로그인합니다. 팀·프로젝트·내 업무·알림·설정 등은 App Router 경로로 구성되어 있습니다. (구조: [`docs/web/README.md`](docs/web/README.md))

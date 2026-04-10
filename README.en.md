@@ -161,11 +161,29 @@ pnpm dev
 | Notifications (Socket.IO) | http://localhost:4001 (web uses `NEXT_PUBLIC_NOTIFICATION_URL`) |
 | Desktop | Electron window (starts after the web app is ready with `pnpm dev`) |
 
+### Google Workspace OIDC login (optional)
+
+To enable Google sign-in, add these keys to the root `.env`. For the full server-side guide, see [`docs/en/server/README.md`](docs/en/server/README.md#google-workspace-oidc-optional).
+
+| Key | Description |
+| --- | --- |
+| `GOOGLE_OIDC_ENABLED` | Attempts to enable Google login routes when set to `true` |
+| `GOOGLE_OIDC_CLIENT_ID` | Google Cloud OAuth client ID |
+| `GOOGLE_OIDC_CLIENT_SECRET` | Google Cloud OAuth client secret |
+| `GOOGLE_OIDC_REDIRECT_URI` | API callback URL registered in Google Cloud. Example: `http://localhost:4000/api/auth/google/callback` |
+| `GOOGLE_OIDC_ALLOWED_DOMAINS` | Allowed Google Workspace email domains (comma-separated) |
+| `GOOGLE_OIDC_SCOPES` | The current default is `openid email profile`, and the server currently uses that fixed scope set |
+| `WEB_PUBLIC_URL` | Base web-app URL the API redirects back to after login. Example: `http://localhost:3000` |
+
+The Google sign-in button only appears when **all required env values are valid and the first `SUPER_ADMIN` already exists**.
+
 ---
 
 ## Usage
 
 1. **First account** — When there are no users, the API logs a `SETUP TOKEN`. Sign up with `setupToken` in the body to create **SUPER_ADMIN**. After that, normal signup / invite flows apply. ([Details: `docs/en/server/README.md` — Bootstrap](docs/en/server/README.md#bootstrap-super_admin))
+
+   Even with Google Workspace OIDC configured, the **first `SUPER_ADMIN` must still be created with the setup token first** before Google sign-in is shown.
 
 2. **Browser** — Open http://localhost:3000 and sign in. Teams, projects, my work, notifications, and settings live under the App Router. ([`docs/en/web/README.md`](docs/en/web/README.md))
 
