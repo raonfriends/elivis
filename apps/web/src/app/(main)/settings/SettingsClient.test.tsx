@@ -96,6 +96,8 @@ vi.mock("@/app/actions/users", () => ({
 }));
 
 vi.mock("@repo/ui", () => ({
+    isExternalAuthProvider: (authProvider: UserProfile["authProvider"] | null | undefined) =>
+        authProvider === "GOOGLE" || authProvider === "LDAP",
     StatusDropdown: () => <div data-testid="status-dropdown" />,
 }));
 

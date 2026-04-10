@@ -16,8 +16,7 @@ import {
 import { getApiBaseUrl } from "@/lib/http/api-base-url";
 import type { ApiNotificationPreferences } from "@/lib/mappers/user";
 import type { UserProfile } from "@/lib/user/user-types";
-import { StatusDropdown } from "@repo/ui";
-import { isExternalAuthProvider } from "../../../../../../packages/ui/src/types/user-profile";
+import { isExternalAuthProvider, StatusDropdown } from "@repo/ui";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 타입
