@@ -6,6 +6,7 @@ import {
     consumeGoogleAuthorization,
     createGoogleAuthorizationRequest,
     getGoogleOidcConfig,
+    getTrustedGoogleCallbackBaseUrl,
     isAllowedGoogleDomain,
     isGoogleOidcAvailable,
 } from "./google-oidc.service";
@@ -69,6 +70,7 @@ describe("assertGoogleOidcAvailable", () => {
             GOOGLE_OIDC_CLIENT_SECRET: "client-secret",
             GOOGLE_OIDC_REDIRECT_URI: "https://example.com/auth/google/callback",
             GOOGLE_OIDC_ALLOWED_DOMAINS: "example.com",
+            WEB_PUBLIC_URL: "https://web.example.com",
         };
 
         expect(() => assertGoogleOidcAvailable(false)).toThrow(/super admin/i);
@@ -82,9 +84,31 @@ describe("assertGoogleOidcAvailable", () => {
             GOOGLE_OIDC_CLIENT_SECRET: "client-secret",
             GOOGLE_OIDC_REDIRECT_URI: "https://example.com/auth/google/callback",
             GOOGLE_OIDC_ALLOWED_DOMAINS: "example.com",
+            WEB_PUBLIC_URL: "https://web.example.com",
         };
 
         expect(() => assertGoogleOidcAvailable(true)).toThrow(/client id/i);
+    });
+
+    it("throws when WEB_PUBLIC_URL is missing or invalid", () => {
+        process.env = {
+            ...originalEnv,
+            GOOGLE_OIDC_ENABLED: "true",
+            GOOGLE_OIDC_CLIENT_ID: "client-id",
+            GOOGLE_OIDC_CLIENT_SECRET: "client-secret",
+            GOOGLE_OIDC_REDIRECT_URI: "https://example.com/auth/google/callback",
+            GOOGLE_OIDC_ALLOWED_DOMAINS: "example.com",
+            WEB_PUBLIC_URL: "",
+        };
+
+        expect(() => assertGoogleOidcAvailable(true)).toThrow(/WEB_PUBLIC_URL/i);
+
+        process.env = {
+            ...process.env,
+            WEB_PUBLIC_URL: "ftp://web.example.com",
+        };
+
+        expect(() => assertGoogleOidcAvailable(true)).toThrow(/http\(s\)/i);
     });
 });
 
@@ -97,6 +121,7 @@ describe("isGoogleOidcAvailable", () => {
             GOOGLE_OIDC_CLIENT_SECRET: "client-secret",
             GOOGLE_OIDC_REDIRECT_URI: "https://example.com/auth/google/callback",
             GOOGLE_OIDC_ALLOWED_DOMAINS: "example.com",
+            WEB_PUBLIC_URL: "https://web.example.com",
         };
 
         expect(isGoogleOidcAvailable(false)).toBe(false);
@@ -111,9 +136,41 @@ describe("isGoogleOidcAvailable", () => {
             GOOGLE_OIDC_CLIENT_SECRET: "client-secret",
             GOOGLE_OIDC_REDIRECT_URI: "https://example.com/auth/google/callback",
             GOOGLE_OIDC_ALLOWED_DOMAINS: "example.com",
+            WEB_PUBLIC_URL: "https://web.example.com",
         };
 
         expect(isGoogleOidcAvailable(true)).toBe(true);
+    });
+
+    it("returns false when WEB_PUBLIC_URL is missing", () => {
+        process.env = {
+            ...originalEnv,
+            GOOGLE_OIDC_ENABLED: "true",
+            GOOGLE_OIDC_CLIENT_ID: "client-id",
+            GOOGLE_OIDC_CLIENT_SECRET: "client-secret",
+            GOOGLE_OIDC_REDIRECT_URI: "https://example.com/auth/google/callback",
+            GOOGLE_OIDC_ALLOWED_DOMAINS: "example.com",
+            WEB_PUBLIC_URL: "",
+        };
+
+        expect(isGoogleOidcAvailable(true)).toBe(false);
+    });
+});
+
+describe("getTrustedGoogleCallbackBaseUrl", () => {
+    it("normalizes a valid trusted web callback base URL", () => {
+        expect(
+            getTrustedGoogleCallbackBaseUrl({
+                WEB_PUBLIC_URL: " https://web.example.com/app ",
+            }),
+        ).toBe("https://web.example.com/app");
+    });
+
+    it("rejects missing or non-http(s) callback base URLs", () => {
+        expect(() => getTrustedGoogleCallbackBaseUrl({ WEB_PUBLIC_URL: "" })).toThrow(/WEB_PUBLIC_URL/i);
+        expect(() => getTrustedGoogleCallbackBaseUrl({ WEB_PUBLIC_URL: "ftp://web.example.com" })).toThrow(
+            /http\(s\)/i,
+        );
     });
 });
 

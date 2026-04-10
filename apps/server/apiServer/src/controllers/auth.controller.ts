@@ -16,6 +16,7 @@ import {
     consumeGoogleAuthorization,
     createGoogleAuthorizationRequest,
     getGoogleOidcConfig,
+    getTrustedGoogleCallbackBaseUrl,
 } from "../services/google-oidc.service";
 import { authenticateLdap } from "../services/ldap.service";
 import {
@@ -127,15 +128,7 @@ function googleCompletionTicketKey(ticket: string): string {
 }
 
 function getTrustedGoogleCallbackUrl(ticket: string): string {
-    const baseUrl = process.env.WEB_PUBLIC_URL?.trim();
-    if (!baseUrl) {
-        throw new Error("WEB_PUBLIC_URL is required for Google auth completion.");
-    }
-
-    const callbackUrl = new URL("/auth/google/callback", baseUrl);
-    if (!callbackUrl.protocol.startsWith("http")) {
-        throw new Error("WEB_PUBLIC_URL must be an absolute http(s) URL.");
-    }
+    const callbackUrl = new URL("/auth/google/callback", getTrustedGoogleCallbackBaseUrl());
 
     callbackUrl.searchParams.set("ticket", ticket);
     return callbackUrl.toString();

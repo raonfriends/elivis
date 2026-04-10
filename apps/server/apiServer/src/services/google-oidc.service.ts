@@ -15,7 +15,8 @@ type EnvSource = Partial<
         | "GOOGLE_OIDC_CLIENT_ID"
         | "GOOGLE_OIDC_CLIENT_SECRET"
         | "GOOGLE_OIDC_REDIRECT_URI"
-        | "GOOGLE_OIDC_ALLOWED_DOMAINS",
+        | "GOOGLE_OIDC_ALLOWED_DOMAINS"
+        | "WEB_PUBLIC_URL",
         string
     >
 >;
@@ -170,6 +171,20 @@ function assertCompleteGoogleOidcConfig(config: GoogleOidcConfig): void {
     }
 }
 
+export function getTrustedGoogleCallbackBaseUrl(env: EnvSource = process.env): string {
+    const baseUrl = normalizeString(env.WEB_PUBLIC_URL);
+    if (!baseUrl) {
+        throw new Error("WEB_PUBLIC_URL is required for Google auth completion.");
+    }
+
+    const trustedBaseUrl = new URL(baseUrl);
+    if (!["http:", "https:"].includes(trustedBaseUrl.protocol)) {
+        throw new Error("WEB_PUBLIC_URL must be an absolute http(s) URL.");
+    }
+
+    return trustedBaseUrl.toString();
+}
+
 export function assertGoogleOidcAvailable(
     superAdminExists: boolean,
     env: EnvSource = process.env,
@@ -180,6 +195,7 @@ export function assertGoogleOidcAvailable(
 
     const config = getGoogleOidcConfig(env);
     assertCompleteGoogleOidcConfig(config);
+    getTrustedGoogleCallbackBaseUrl(env);
     return config;
 }
 

@@ -10,6 +10,7 @@ const {
     mockGenerateAccessToken,
     mockGenerateRefreshToken,
     mockGetGoogleOidcConfig,
+    mockGetTrustedGoogleCallbackBaseUrl,
 } = vi.hoisted(() => ({
     mockAssertGoogleOidcAvailable: vi.fn(),
     mockCreateGoogleAuthorizationRequest: vi.fn(),
@@ -17,6 +18,7 @@ const {
     mockGenerateAccessToken: vi.fn(),
     mockGenerateRefreshToken: vi.fn(),
     mockGetGoogleOidcConfig: vi.fn(),
+    mockGetTrustedGoogleCallbackBaseUrl: vi.fn(),
 }));
 
 vi.mock("../services/google-oidc.service", () => ({
@@ -24,6 +26,7 @@ vi.mock("../services/google-oidc.service", () => ({
     createGoogleAuthorizationRequest: mockCreateGoogleAuthorizationRequest,
     consumeGoogleAuthorization: mockConsumeGoogleAuthorization,
     getGoogleOidcConfig: mockGetGoogleOidcConfig,
+    getTrustedGoogleCallbackBaseUrl: mockGetTrustedGoogleCallbackBaseUrl,
     isGoogleOidcAvailable: vi.fn(),
 }));
 
@@ -165,6 +168,7 @@ beforeEach(() => {
         scopes: ["openid", "email", "profile"],
     });
     mockGetGoogleOidcConfig.mockReturnValue({ enabled: true });
+    mockGetTrustedGoogleCallbackBaseUrl.mockReturnValue("https://web.example.com/");
     mockCreateGoogleAuthorizationRequest.mockReturnValue({
         authorizationUrl: "https://accounts.google.com/o/oauth2/v2/auth?state=state-1",
         state: "state-1",

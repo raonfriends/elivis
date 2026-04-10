@@ -32,6 +32,7 @@ function setGoogleEnv(overrides?: Partial<NodeJS.ProcessEnv>) {
         GOOGLE_OIDC_CLIENT_SECRET: "client-secret",
         GOOGLE_OIDC_REDIRECT_URI: "https://example.com/auth/google/callback",
         GOOGLE_OIDC_ALLOWED_DOMAINS: "example.com",
+        WEB_PUBLIC_URL: "https://web.example.com",
         ...overrides,
     };
 }
@@ -75,6 +76,14 @@ describe("public auth config google enablement", () => {
 
         await expect(getPublicAuthConfig(makePrisma({ superAdminCount: 1 }))).resolves.toMatchObject({
             googleEnabled: true,
+        });
+    });
+
+    it("returns false when WEB_PUBLIC_URL is missing", async () => {
+        setGoogleEnv({ WEB_PUBLIC_URL: "" });
+
+        await expect(getPublicAuthConfig(makePrisma({ superAdminCount: 1 }))).resolves.toMatchObject({
+            googleEnabled: false,
         });
     });
 });
