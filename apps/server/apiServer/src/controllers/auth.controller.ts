@@ -11,6 +11,11 @@ import {
     isLdapAuthEnabled,
     isPublicSignupEnabled,
 } from "../services/auth-config.service";
+import {
+    assertGoogleOidcAvailable,
+    consumeGoogleAuthorization,
+    createGoogleAuthorizationRequest,
+} from "../services/google-oidc.service";
 import { authenticateLdap } from "../services/ldap.service";
 import {
     generateAccessToken,
@@ -59,6 +64,10 @@ export interface RefreshBody {
     refreshToken: string;
 }
 
+export interface GoogleCompleteBody {
+    ticket: string;
+}
+
 const loginUserSelect = {
     id: true,
     email: true,
@@ -66,6 +75,7 @@ const loginUserSelect = {
     systemRole: true,
     password: true,
     authProvider: true,
+    googleSub: true,
     accessBlocked: true,
     accessBlockReason: true,
 } as const;
@@ -77,9 +87,57 @@ type LoginUserRow = {
     systemRole: "SUPER_ADMIN" | "USER";
     password: string;
     authProvider: AuthProvider;
+    googleSub: string | null;
     accessBlocked: boolean;
     accessBlockReason: string | null;
 };
+
+type GoogleStateRecord = {
+    state: string;
+    nonce: string;
+    codeVerifier: string;
+};
+
+type GoogleCompletionPayload = {
+    accessToken: string;
+    refreshToken: string;
+    user: ReturnType<typeof publicUserStatic>;
+};
+
+const GOOGLE_STATE_TTL_SECONDS = 10 * 60;
+const GOOGLE_COMPLETION_TTL_SECONDS = 60;
+
+function publicUserStatic(u: Pick<LoginUserRow, "id" | "email" | "name" | "systemRole">) {
+    return {
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        systemRole: u.systemRole,
+    };
+}
+
+function googleStateKey(state: string): string {
+    return `auth:google:state:${state}`;
+}
+
+function googleCompletionTicketKey(ticket: string): string {
+    return `auth:google:ticket:${ticket}`;
+}
+
+function getTrustedGoogleCallbackUrl(ticket: string): string {
+    const baseUrl = process.env.WEB_PUBLIC_URL?.trim();
+    if (!baseUrl) {
+        throw new Error("WEB_PUBLIC_URL is required for Google auth completion.");
+    }
+
+    const callbackUrl = new URL("/auth/google/callback", baseUrl);
+    if (!callbackUrl.protocol.startsWith("http")) {
+        throw new Error("WEB_PUBLIC_URL must be an absolute http(s) URL.");
+    }
+
+    callbackUrl.searchParams.set("ticket", ticket);
+    return callbackUrl.toString();
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 컨트롤러 팩토리
@@ -87,12 +145,38 @@ type LoginUserRow = {
 
 export function createAuthController(app: FastifyInstance) {
     function publicUser(u: Pick<LoginUserRow, "id" | "email" | "name" | "systemRole">) {
-        return {
-            id: u.id,
-            email: u.email,
-            name: u.name,
-            systemRole: u.systemRole,
-        };
+        return publicUserStatic(u);
+    }
+
+    async function issueLoginTokens(userId: string): Promise<{ accessToken: string; refreshToken: string }> {
+        const [accessToken, refreshToken] = await Promise.all([
+            generateAccessToken(userId),
+            generateRefreshToken(userId, app.redis),
+        ]);
+
+        return { accessToken, refreshToken };
+    }
+
+    async function storeJsonWithTtl(key: string, value: object, ttlSeconds: number): Promise<void> {
+        await app.redis.set(key, JSON.stringify(value), "EX", ttlSeconds);
+    }
+
+    async function consumeJsonOnce<T>(key: string): Promise<T | null> {
+        const raw = await app.redis.eval(
+            'local value = redis.call("GET", KEYS[1])\nif not value then return nil end\nredis.call("DEL", KEYS[1])\nreturn value',
+            1,
+            key,
+        );
+
+        if (typeof raw !== "string") {
+            return null;
+        }
+
+        try {
+            return JSON.parse(raw) as T;
+        } catch {
+            return null;
+        }
     }
 
     async function sendTokenLogin(
@@ -106,10 +190,7 @@ export function createAuthController(app: FastifyInstance) {
             );
         }
 
-        const [accessToken, refreshToken] = await Promise.all([
-            generateAccessToken(user.id),
-            generateRefreshToken(user.id, app.redis),
-        ]);
+        const { accessToken, refreshToken } = await issueLoginTokens(user.id);
 
         return reply.send(
             ok(
@@ -126,6 +207,161 @@ export function createAuthController(app: FastifyInstance) {
     async function getAuthConfig(request: FastifyRequest, reply: FastifyReply) {
         const cfg = await getPublicAuthConfig(app.prisma);
         return reply.send(ok(cfg, t(request.lang, MSG.AUTH_CONFIG_FETCHED)));
+    }
+
+    async function googleStart(request: FastifyRequest, reply: FastifyReply) {
+        const superAdminExists = (await app.prisma.user.count({ where: { systemRole: "SUPER_ADMIN" } })) > 0;
+
+        try {
+            const config = assertGoogleOidcAvailable(superAdminExists);
+            const authorizationRequest = createGoogleAuthorizationRequest({ config });
+
+            await storeJsonWithTtl(
+                googleStateKey(authorizationRequest.state),
+                {
+                    state: authorizationRequest.state,
+                    nonce: authorizationRequest.nonce,
+                    codeVerifier: authorizationRequest.codeVerifier,
+                },
+                GOOGLE_STATE_TTL_SECONDS,
+            );
+
+            return reply.redirect(authorizationRequest.authorizationUrl);
+        } catch {
+            return reply.code(503).send(serviceUnavailable(t(request.lang, MSG.AUTH_GOOGLE_UNAVAILABLE)));
+        }
+    }
+
+    async function googleCallback(
+        request: FastifyRequest<{ Querystring: { code?: string; state?: string } }>,
+        reply: FastifyReply,
+    ) {
+        const { code, state } = request.query;
+        const lang = request.lang;
+
+        if (!code || !state) {
+            return reply.code(400).send(badRequest(t(lang, MSG.AUTH_GOOGLE_CALLBACK_INVALID)));
+        }
+
+        const superAdminExists = (await app.prisma.user.count({ where: { systemRole: "SUPER_ADMIN" } })) > 0;
+
+        let config;
+        try {
+            config = assertGoogleOidcAvailable(superAdminExists);
+        } catch {
+            return reply.code(503).send(serviceUnavailable(t(lang, MSG.AUTH_GOOGLE_UNAVAILABLE)));
+        }
+
+        const storedState = await consumeJsonOnce<GoogleStateRecord>(googleStateKey(state));
+        if (!storedState) {
+            return reply.code(401).send(unauthorized(t(lang, MSG.AUTH_GOOGLE_CALLBACK_INVALID)));
+        }
+
+        let authorizationResult;
+        try {
+            authorizationResult = await consumeGoogleAuthorization({
+                config,
+                authorizationCode: code,
+                expectedState: storedState.state,
+                returnedState: state,
+                expectedNonce: storedState.nonce,
+                codeVerifier: storedState.codeVerifier,
+            });
+        } catch {
+            return reply.code(401).send(unauthorized(t(lang, MSG.AUTH_GOOGLE_CALLBACK_INVALID)));
+        }
+
+        const { profile } = authorizationResult;
+        let user = await app.prisma.user.findUnique({
+            where: { googleSub: profile.sub },
+            select: loginUserSelect,
+        });
+
+        if (!user) {
+            const emailUser = await app.prisma.user.findUnique({
+                where: { email: profile.email },
+                select: loginUserSelect,
+            });
+
+            if (emailUser) {
+                if (emailUser.authProvider !== "GOOGLE") {
+                    return reply.code(409).send(conflict(t(lang, MSG.AUTH_GOOGLE_PROVIDER_CONFLICT)));
+                }
+
+                const needsUpdate =
+                    emailUser.googleSub !== profile.sub || emailUser.email !== profile.email || emailUser.name !== profile.name;
+
+                user = needsUpdate
+                    ? await app.prisma.user.update({
+                          where: { id: emailUser.id },
+                          data: {
+                              email: profile.email,
+                              name: profile.name,
+                              googleSub: profile.sub,
+                          },
+                          select: loginUserSelect,
+                      })
+                    : emailUser;
+            } else {
+                const placeholderPassword = await bcrypt.hash(randomBytes(48).toString("hex"), 12);
+                user = await app.prisma.user.create({
+                    data: {
+                        id: generatePublicId(),
+                        email: profile.email,
+                        password: placeholderPassword,
+                        name: profile.name,
+                        authProvider: "GOOGLE",
+                        googleSub: profile.sub,
+                        systemRole: "USER",
+                    },
+                    select: loginUserSelect,
+                });
+            }
+        }
+
+        if (user.accessBlocked) {
+            return reply.code(403).send(
+                forbiddenAccessBlocked(t(lang, MSG.AUTH_ACCESS_BLOCKED), user.accessBlockReason),
+            );
+        }
+
+        const { accessToken, refreshToken } = await issueLoginTokens(user.id);
+        const ticket = randomBytes(32).toString("base64url");
+
+        await storeJsonWithTtl(
+            googleCompletionTicketKey(ticket),
+            {
+                accessToken,
+                refreshToken,
+                user: publicUser(user),
+            },
+            GOOGLE_COMPLETION_TTL_SECONDS,
+        );
+
+        try {
+            return reply.redirect(getTrustedGoogleCallbackUrl(ticket));
+        } catch {
+            return reply.code(503).send(serviceUnavailable(t(lang, MSG.AUTH_GOOGLE_UNAVAILABLE)));
+        }
+    }
+
+    async function googleComplete(
+        request: FastifyRequest<{ Body: GoogleCompleteBody }>,
+        reply: FastifyReply,
+    ) {
+        const { ticket } = request.body;
+        const lang = request.lang;
+
+        if (!ticket) {
+            return reply.code(400).send(badRequest(t(lang, MSG.AUTH_GOOGLE_TICKET_REQUIRED)));
+        }
+
+        const payload = await consumeJsonOnce<GoogleCompletionPayload>(googleCompletionTicketKey(ticket));
+        if (!payload) {
+            return reply.code(401).send(unauthorized(t(lang, MSG.AUTH_GOOGLE_TICKET_INVALID)));
+        }
+
+        return reply.send(ok(payload, t(lang, MSG.AUTH_LOGIN)));
     }
 
     async function signup(request: FastifyRequest<{ Body: SignupBody }>, reply: FastifyReply) {
@@ -357,5 +593,5 @@ export function createAuthController(app: FastifyInstance) {
         return reply.code(200).send(noContent(t(request.lang, MSG.AUTH_LOGOUT_ALL)));
     }
 
-    return { getAuthConfig, signup, login, refresh, logout, logoutAll };
+    return { getAuthConfig, googleStart, googleCallback, googleComplete, signup, login, refresh, logout, logoutAll };
 }

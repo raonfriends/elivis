@@ -27,6 +27,11 @@ export const MSG = {
     AUTH_USE_LOCAL_TAB: "server.auth.useLocalTab",
     AUTH_LDAP_MODE_DISABLED: "server.auth.ldapModeDisabled",
     AUTH_LDAP_NOT_CONFIGURED: "server.auth.ldapNotConfigured",
+    AUTH_GOOGLE_UNAVAILABLE: "server.auth.googleUnavailable",
+    AUTH_GOOGLE_CALLBACK_INVALID: "server.auth.googleCallbackInvalid",
+    AUTH_GOOGLE_PROVIDER_CONFLICT: "server.auth.googleProviderConflict",
+    AUTH_GOOGLE_TICKET_REQUIRED: "server.auth.googleTicketRequired",
+    AUTH_GOOGLE_TICKET_INVALID: "server.auth.googleTicketInvalid",
 
     ADMIN_AUTH_LDAP_INCOMPLETE: "server.admin.authLdapIncomplete",
     ADMIN_AUTH_LDAP_BIND_PASSWORD_REQUIRED: "server.admin.authLdapBindPasswordRequired",

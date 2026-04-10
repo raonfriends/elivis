@@ -1,14 +1,18 @@
 import type { FastifyInstance } from "fastify";
 
 import { createAuthController } from "../controllers/auth.controller";
-import type { LoginBody, RefreshBody, SignupBody } from "../controllers/auth.controller";
+import type { GoogleCompleteBody, LoginBody, RefreshBody, SignupBody } from "../controllers/auth.controller";
 import { authenticateUser } from "../middleware/auth";
 
 export async function authRoutes(app: FastifyInstance) {
-    const { getAuthConfig, signup, login, refresh, logout, logoutAll } = createAuthController(app);
+    const { getAuthConfig, googleStart, googleCallback, googleComplete, signup, login, refresh, logout, logoutAll } =
+        createAuthController(app);
 
     // 인증 불필요
     app.get("/auth/config", getAuthConfig);
+    app.get("/auth/google/start", googleStart);
+    app.get("/auth/google/callback", googleCallback);
+    app.post<{ Body: GoogleCompleteBody }>("/auth/google/complete", googleComplete);
     app.post<{ Body: SignupBody }>("/auth/signup", signup);
     app.post<{ Body: LoginBody }>("/auth/login", login);
     app.post<{ Body: RefreshBody }>("/auth/refresh", refresh);
