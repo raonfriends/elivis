@@ -47,12 +47,32 @@ Built by me — updates and behind-the-scenes on these channels too.
 
 ## Screenshots
 
+<details>
+<summary><strong>Expand screenshots</strong></summary>
+
 <p align="center">
-  <img src="docs/assets/readme/screen1.png" alt="Elivis screenshot 1" width="780" />
+  <img src="docs/assets/readme/screen1.jpg" alt="Elivis screenshot 1" width="780" />
 </p>
 <p align="center">
-  <img src="docs/assets/readme/screen2.png" alt="Elivis screenshot 2" width="780" />
+  <img src="docs/assets/readme/screen2.jpg" alt="Elivis screenshot 2" width="780" />
 </p>
+<p align="center">
+  <img src="docs/assets/readme/screen3.jpg" alt="Elivis screenshot 3" width="780" />
+</p>
+<p align="center">
+  <img src="docs/assets/readme/screen4.jpg" alt="Elivis screenshot 4" width="780" />
+</p>
+<p align="center">
+  <img src="docs/assets/readme/screen5.jpg" alt="Elivis screenshot 5" width="780" />
+</p>
+<p align="center">
+  <img src="docs/assets/readme/screen6.jpg" alt="Elivis screenshot 6" width="780" />
+</p>
+<p align="center">
+  <img src="docs/assets/readme/screen7.jpg" alt="Elivis screenshot 7" width="780" />
+</p>
+
+</details>
 
 ---
 
