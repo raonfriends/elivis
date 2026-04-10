@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 
 import { loginAction } from "@/app/actions/auth";
 import { setLanguageAction } from "@/app/actions/language";
+import { apiUrl } from "@/lib/http/api-base-url";
 import { LanguageSelector } from "@repo/ui";
 
 import { SignupModal } from "./SignupModal";
@@ -16,9 +17,16 @@ const REMEMBER_PREF_KEY = "elivis_remember_pref";
 export interface LoginPageClientProps {
     publicSignupEnabled: boolean;
     ldapEnabled: boolean;
+    googleEnabled: boolean;
+    callbackError: string | null;
 }
 
-export function LoginPageClient({ publicSignupEnabled, ldapEnabled }: LoginPageClientProps) {
+export function LoginPageClient({
+    publicSignupEnabled,
+    ldapEnabled,
+    googleEnabled,
+    callbackError,
+}: LoginPageClientProps) {
     const t = useTranslations("auth");
     const [state, formAction, isPending] = useActionState(loginAction, initialState);
 
@@ -49,6 +57,8 @@ export function LoginPageClient({ publicSignupEnabled, ldapEnabled }: LoginPageC
     }
 
     const loginMode = ldapEnabled ? loginTab : "local";
+    const visibleError = callbackError ?? state.error;
+    const googleLoginHref = apiUrl("/api/auth/google/start");
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-[#f8f7f5] px-4 py-8 sm:px-6">
@@ -110,9 +120,9 @@ export function LoginPageClient({ publicSignupEnabled, ldapEnabled }: LoginPageC
                             <p className="text-xs leading-relaxed text-stone-500">{t("ldapTabHelp")}</p>
                         ) : null}
 
-                        {state.error && (
+                        {visibleError && (
                             <p className="whitespace-pre-wrap rounded-xl bg-red-50 px-4 py-3 text-sm text-red-600">
-                                {state.error}
+                                {visibleError}
                             </p>
                         )}
 
@@ -196,6 +206,15 @@ export function LoginPageClient({ publicSignupEnabled, ldapEnabled }: LoginPageC
                                 t("loginButton")
                             )}
                         </button>
+
+                        {googleEnabled ? (
+                            <a
+                                href={googleLoginHref}
+                                className="flex w-full items-center justify-center rounded-xl border border-stone-300 bg-white py-3 text-sm font-medium text-stone-800 transition-colors hover:border-stone-400 hover:bg-stone-50"
+                            >
+                                Continue with Google
+                            </a>
+                        ) : null}
                     </form>
                 </div>
 

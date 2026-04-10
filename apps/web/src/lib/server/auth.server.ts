@@ -97,6 +97,37 @@ export async function setAuthSessionCookies(
     });
 }
 
+export async function completeGoogleLogin(ticket: string): Promise<void> {
+    const trimmedTicket = ticket.trim();
+
+    if (!trimmedTicket) {
+        throw new Error("Missing Google login ticket.");
+    }
+
+    const lang = await getLangHeader();
+    const res = await fetch(apiUrl("/api/auth/google/complete"), {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "Accept-Language": lang,
+        },
+        body: JSON.stringify({ ticket: trimmedTicket }),
+        cache: "no-store",
+    });
+
+    const body = (await res.json().catch(() => ({}))) as Partial<ApiAuthLoginData> & { message?: string };
+
+    if (!res.ok) {
+        throw new Error(body.message ?? "Google sign-in failed.");
+    }
+
+    if (!body.accessToken || !body.refreshToken) {
+        throw new Error("Google sign-in failed.");
+    }
+
+    await setAuthSessionCookies(body.accessToken, body.refreshToken);
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 로그인
 // ─────────────────────────────────────────────────────────────────────────────
