@@ -19,7 +19,7 @@ export interface LoginPageClientProps {
     googleEnabled: boolean;
 }
 
-export function LoginPageClient({ publicSignupEnabled, ldapEnabled, googleEnabled }: LoginPageClientProps) {
+export function LoginPageClient({ publicSignupEnabled, ldapEnabled }: LoginPageClientProps) {
     const t = useTranslations("auth");
     const [state, formAction, isPending] = useActionState(loginAction, initialState);
 
@@ -27,7 +27,6 @@ export function LoginPageClient({ publicSignupEnabled, ldapEnabled, googleEnable
     const [rememberEmail, setRememberEmail] = useState(false);
     const [loginTab, setLoginTab] = useState<"local" | "ldap">("local");
     const [signupOpen, setSignupOpen] = useState(false);
-    void googleEnabled;
 
     useEffect(() => {
         const pref = localStorage.getItem(REMEMBER_PREF_KEY) === "1";
