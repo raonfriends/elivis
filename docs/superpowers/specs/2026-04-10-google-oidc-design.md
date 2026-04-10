@@ -55,8 +55,12 @@
 - `email_verified === true` 가 아니면 로그인 거부한다.
 
 ### 자동 생성 정책
-- 동일 이메일 사용자가 없으면 `authProvider=GOOGLE`, `systemRole=USER` 로 자동 생성한다.
+- **최초 SUPER_ADMIN 이 아직 없는 상태에서는 Google 로그인 자체를 허용하지 않는다.**
+- 즉, 기존 setup-token 기반 로컬 첫 가입으로 SUPER_ADMIN 이 먼저 생성된 뒤에만 Google OIDC 로그인을 노출/허용한다.
+- 이후 동일 이메일 사용자가 없으면 `authProvider=GOOGLE`, `systemRole=USER` 로 자동 생성한다.
 - `password` 필드는 LDAP 전용 계정과 같은 방식으로 **사용되지 않는 더미 bcrypt hash** 를 저장한다.
+
+이 규칙은 fresh install 상태에서 첫 Google 로그인으로 `USER` 만 생성되고 SUPER_ADMIN bootstrap 경로가 영구적으로 막히는 문제를 방지한다.
 
 ### provider 충돌 정책
 보수적으로 자동 병합을 하지 않는다.
@@ -123,7 +127,11 @@
 `GET /api/auth/config` 응답에 아래 필드를 추가한다.
 - `googleEnabled: boolean`
 
-이 값은 env 검증 결과를 반영한다.
+이 값은 아래 조건을 모두 만족할 때만 `true` 이다.
+- Google OIDC env 구성이 유효함
+- 시스템에 최소 1명의 `SUPER_ADMIN` 이 이미 존재함
+
+즉, fresh install 에서는 setup-token 기반 첫 관리자 생성 전까지 Google 버튼을 노출하지 않는다.
 
 ### 2) Google OIDC service 추가
 예상 파일:
@@ -169,6 +177,7 @@
 
 #### `/api/auth/google/start`
 - Google 기능이 비활성화면 **404** 반환
+- Google env 미구성 또는 `SUPER_ADMIN` 부재 상태면 시작 자체를 거부한다.
 - state / nonce 생성 후 Redis 저장
 - PKCE verifier/challenge 생성
 - Google authorize URL로 redirect
@@ -338,6 +347,7 @@ ID token 검증 시 아래 항목을 명시적으로 검사한다.
 ## 검증 계획
 ### 백엔드
 - Google env 유효/무효에 따른 `googleEnabled` 계산 테스트
+- `SUPER_ADMIN` 부재 시 `googleEnabled=false` 및 start route 거부 테스트
 - 허용 도메인 파서 테스트
 - state/nonce 검증 테스트
 - PKCE verifier/challenge 사용 테스트
@@ -355,6 +365,8 @@ ID token 검증 시 아래 항목을 명시적으로 검사한다.
 - 만료/재사용 ticket 실패 테스트
 
 ### 수동 검증
+- fresh install 상태에서 Google 버튼 비노출 확인
+- setup-token 기반 첫 SUPER_ADMIN 생성 후 Google 버튼 노출 확인
 - 허용 도메인 계정 로그인 성공
 - 비허용 도메인 계정 로그인 실패
 - 기존 LOCAL 동일 이메일 로그인 실패
