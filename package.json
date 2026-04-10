@@ -19,7 +19,7 @@
     "db:reset:force": "pnpm --filter @repo/database db:reset:force",
     "db:studio": "pnpm --filter @repo/database db:studio",
     "lint": "turbo lint",
-    "test": "vitest run --workspace vitest.workspace.ts",
+    "test": "vitest run",
     "type-check": "turbo type-check",
     "docker:dev:up": "docker compose up -d",
     "docker:dev:down": "docker compose down",
