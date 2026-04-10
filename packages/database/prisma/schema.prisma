@@ -104,6 +104,7 @@ enum ProjectHistoryResourceType {
 enum AuthProvider {
   LOCAL
   LDAP
+  GOOGLE
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -161,6 +162,7 @@ model User {
   status     UserStatus @default(WORKING) /// 현재 상태
   password      String       /// bcrypt 해시 저장 (LDAP 전용 계정은 사용되지 않는 더미 해시)
   authProvider  AuthProvider @default(LOCAL)
+  googleSub     String?      @unique
   systemRole    SystemRole   @default(USER)
   /// true면 로그인·토큰 갱신·API 접근 불가 (관리자가 해제할 때까지)
   accessBlocked     Boolean   @default(false)

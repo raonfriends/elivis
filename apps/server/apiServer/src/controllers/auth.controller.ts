@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 
 import bcrypt from "bcryptjs";
-import { generatePublicId } from "@repo/database";
+import { generatePublicId, type AuthProvider } from "@repo/database";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { t } from "@repo/i18n";
 
@@ -76,7 +76,7 @@ type LoginUserRow = {
     name: string | null;
     systemRole: "SUPER_ADMIN" | "USER";
     password: string;
-    authProvider: "LOCAL" | "LDAP";
+    authProvider: AuthProvider;
     accessBlocked: boolean;
     accessBlockReason: string | null;
 };
