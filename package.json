@@ -20,6 +20,7 @@
     "db:studio": "pnpm --filter @repo/database db:studio",
     "lint": "turbo lint",
     "test": "vitest run",
+    "test:api-google-oidc": "pnpm --filter @repo/api-server test -- google-oidc.service",
     "type-check": "turbo type-check",
     "docker:dev:up": "docker compose up -d",
     "docker:dev:down": "docker compose down",
