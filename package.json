@@ -19,6 +19,7 @@
     "db:reset:force": "pnpm --filter @repo/database db:reset:force",
     "db:studio": "pnpm --filter @repo/database db:studio",
     "lint": "turbo lint",
+    "test": "vitest run --workspace vitest.workspace.ts",
     "type-check": "turbo type-check",
     "docker:dev:up": "docker compose up -d",
     "docker:dev:down": "docker compose down",
@@ -35,9 +36,11 @@
     "eslint": "^9.17.0",
     "concurrently": "^9.1.2",
     "husky": "^9.1.7",
+    "jsdom": "^26.1.0",
     "lint-staged": "^15.5.2",
     "prettier": "^3.3.0",
-    "turbo": "^2.3.0"
+    "turbo": "^2.3.0",
+    "vitest": "^3.2.4"
   },
   "lint-staged": {
     "*.{js,jsx,ts,tsx,json,css,md,mdx,yaml,yml}": "prettier --write"

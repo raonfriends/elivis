@@ -8,6 +8,7 @@
     "start": "cross-env DOTENV_CONFIG_PATH=../../../.env node dist/index.js",
     "lint": "node ../../../scripts/eslint-run.mjs . --max-warnings 0",
     "type-check": "tsc --noEmit",
+    "test": "vitest run",
     "backfill:team-member-workspaces": "cross-env DOTENV_CONFIG_PATH=../../../.env tsx src/scripts/backfill-team-member-workspaces.ts"
   },
   "dependencies": {

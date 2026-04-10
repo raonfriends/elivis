@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "node ../../scripts/eslint-run.mjs . --max-warnings 0",
+    "test": "vitest run",
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
