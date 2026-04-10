@@ -96,13 +96,26 @@
 - `GOOGLE`
 
 ### User 사용 방식
-추가 컬럼은 이번 범위에서 필수가 아니다. 최소 변경 원칙으로 간다.
-- `email`: Google 기본 식별자
+이번 범위에서도 **Google `sub` 저장은 필수**로 포함한다.
+
+- `email`: 사용자 표시/연락용 이메일
 - `name`: Google profile name으로 최초 생성 및 필요 시 업데이트
 - `authProvider=GOOGLE`
 - `password`: dummy hash
+- `googleSub`: Google OIDC의 고유 subject
 
-> 메모: 향후 Google `sub` 저장 필요성이 생기면 별도 컬럼 또는 연결 테이블로 확장할 수 있으나, 이번 범위에서는 YAGNI 원칙으로 제외한다.
+이유:
+- 이메일만으로는 OIDC provider 내부의 안정적 식별자를 보장하기 어렵다.
+- 향후 이메일 rename, alias, 조직 정책 변경 상황에서도 Google 계정 연속성을 유지하려면 `sub` 를 영속 보관해야 한다.
+
+권장 최소 스키마 변경:
+- `User.googleSub String? @unique`
+
+운영 규칙:
+- 신규 Google 사용자 생성 시 `googleSub` 저장
+- 기존 `GOOGLE` 사용자 로그인 시 1차 식별은 `googleSub` 로 수행
+- `googleSub` 가 같고 이메일이 바뀌었으면 이메일/이름을 갱신할 수 있다.
+- `googleSub` 는 다른 사용자의 값으로 재사용될 수 없어야 한다.
 
 ## 백엔드 설계
 ### 1) Public auth config 확장
@@ -119,18 +132,19 @@
 - env 로드/검증
 - Google discovery 또는 고정 endpoint 구성
 - authorization URL 생성
-- state / nonce 생성 및 검증 보조
+- state / nonce / PKCE verifier 생성 및 검증 보조
 - code -> token 교환
 - ID token 검증
-- email / email_verified / name / hd 추출
+- email / email_verified / name / hd / sub 추출
 - 허용 도메인 검사
 
-### 3) OIDC state/nonce 처리
+### 3) OIDC state/nonce/PKCE 처리
 간단하고 안전한 방식으로 **Redis 기반 단기 저장**을 사용한다.
 
 저장 정보 예시:
 - `state`
 - `nonce`
+- `codeVerifier`
 - `returnTo`(선택)
 - 만료 시간: 5~10분
 
@@ -139,52 +153,89 @@
 - API/웹이 분리된 구조에서 서버 검증에 적합하다.
 - 무상태 JWT보다 구현이 단순하고 회수도 쉽다.
 
+추가 보안 원칙:
+- Authorization Code Flow에 **PKCE(S256)** 를 적용한다.
+- `code_challenge` 는 시작 시 authorize 요청에 포함한다.
+- `code_verifier` 는 callback의 token 교환 시 사용한다.
+
 ### 4) 라우트 추가
 `apps/server/apiServer/src/routes/auth.routes.ts`
 
 추가 후보:
-- `GET /auth/google/start`
-- `GET /auth/google/callback`
+- `GET /api/auth/google/start`
+- `GET /api/auth/google/callback`
+- `POST /api/auth/google/complete`
 
-#### `/auth/google/start`
-- Google 기능이 비활성화면 404 또는 400 반환
+#### `/api/auth/google/start`
+- Google 기능이 비활성화면 **404** 반환
 - state / nonce 생성 후 Redis 저장
+- PKCE verifier/challenge 생성
 - Google authorize URL로 redirect
 
-#### `/auth/google/callback`
+#### `/api/auth/google/callback`
 - `code`, `state` 검증
-- Redis에서 state 조회 및 nonce 확보
+- Redis에서 state 조회 및 nonce/codeVerifier 확보
 - token endpoint 교환
 - ID token 검증
 - 도메인/이메일 검증
 - 사용자 조회/생성/충돌 판정
 - Elivis access/refresh token 발급
-- 웹 세션 확정 경로로 redirect
+- one-time completion ticket 생성 후 웹 세션 확정 경로로 redirect
+
+#### `POST /api/auth/google/complete`
+- 입력: `{ ticket: string }`
+- 역할: API가 Redis에 저장된 one-time login completion ticket을 **원자적으로 1회만 소비**한다.
+- 성공 응답: `{ accessToken, refreshToken, user }`
+- 실패 응답: 만료/이미 사용됨/존재하지 않음에 대해 400 또는 401의 안정된 에러 코드 반환
+- ticket TTL: 60초 내외 권장
 
 ### 5) 웹 세션 연결 방식
-**권장 방식:** API callback이 웹의 세션 완료 엔드포인트로 짧은 수명 one-time payload를 넘긴다.
+**권장 방식:** API callback이 웹의 세션 완료 엔드포인트로 짧은 수명 one-time ticket을 넘긴다.
 
 구체 방식:
 1. API callback에서 Elivis 토큰(access/refresh)을 직접 URL에 싣지 않는다.
 2. 대신 Redis에 짧은 수명의 login-completion key를 저장한다.
 3. API는 웹의 예: `/auth/google/callback?ticket=...` 로 redirect 한다.
-4. 웹 서버 액션/route handler가 `ticket` 으로 API 또는 Redis-backed endpoint를 조회해 토큰을 받아 httpOnly cookie를 설정한다.
+4. 웹 route handler가 `ticket` 으로 `POST /api/auth/google/complete` 를 호출해 토큰을 받아 httpOnly cookie를 설정한다.
 5. 이후 `/` 또는 원래 목적지로 redirect 한다.
 
 이유:
 - access/refresh token이 URL, browser history, proxy log에 직접 남지 않는다.
 - 현재 웹 쿠키 관리 패턴과 잘 맞는다.
 
+주의:
+- 웹이 Redis를 직접 읽지 않는다.
+- completion ticket 소비는 API 단일 엔드포인트에서만 수행한다.
+- ticket은 1회 사용 후 즉시 삭제되어 replay를 막아야 한다.
+
 ### 6) 사용자 처리 로직
 기존 `auth.controller.ts`에 Google 완료 헬퍼를 추가한다.
 
 동작:
-- `user = findUnique({ email })`
+- `googleSub` 로 기존 `GOOGLE` 사용자 우선 조회
+- 없으면 `email` 로 기존 사용자 조회
 - `user == null` -> 생성
 - `user.authProvider === GOOGLE` -> 로그인
 - `user.authProvider === LOCAL || LDAP` -> 충돌 오류
 
 이때 Google에서 받은 이름이 기존 값과 다르면 `GOOGLE` 계정에 한해 이름 갱신을 허용할 수 있다.
+또한 `googleSub` 가 일치하는 기존 `GOOGLE` 계정은 이메일 변경이 있어도 동일 사용자로 취급한다.
+
+### 7) OIDC 검증 체크리스트
+ID token 검증 시 아래 항목을 명시적으로 검사한다.
+
+- 서명 검증: Google discovery/JWKS 기반
+- `iss`: Google 허용 issuer 와 일치
+- `aud`: 우리 `GOOGLE_OIDC_CLIENT_ID` 와 일치
+- `azp`: 필요한 경우 허용된 client 와 일치
+- `exp`: 만료되지 않음
+- `nbf`: 존재 시 현재 시각 이전/동일
+- `nonce`: Redis에 저장한 값과 일치
+- `sub`: 비어 있지 않음
+- `email`: 비어 있지 않음
+- `email_verified === true`
+
+구현은 discovery metadata 및 JWKS 검증을 사용하는 표준 OIDC/OAuth 라이브러리 위에서 수행한다.
 
 ## 웹 설계
 ### 로그인 화면
@@ -229,31 +280,45 @@
 - 기존 LOCAL 계정과 충돌
 - 기존 LDAP 계정과 충돌
 - Google 로그인 완료 실패
+- Google completion ticket 만료/재사용
 
 기존 `packages/i18n/src/locales/*.ts` 및 서버 메시지 체계에 맞춘다.
 
 ## 보안 고려사항
 - state 필수 검증
 - nonce 필수 검증
+- PKCE(S256) 적용
 - `email_verified` 강제
 - 도메인 화이트리스트 검증
 - access/refresh token을 URL query로 직접 전달 금지
 - one-time ticket 짧은 TTL 및 1회 사용 후 폐기
+- ticket consume는 원자적이어야 함
+- `iss`, `aud`, `azp`, `exp`, `nbf`, `sub` 검증 필수
 - 오류 메시지는 사용자에게 과도한 내부 정보 노출 금지
+
+### returnTo 정책
+- v1에서는 open redirect 위험을 줄이기 위해 `returnTo` 를 선택 기능으로만 다루고, 구현 시에는 **상대 경로만 허용**한다.
+- 상대 경로가 아니거나 비어 있으면 `/` 로 fallback 한다.
+- 구현 복잡도를 줄이고 싶으면 v1에서 `returnTo` 자체를 생략하고 항상 `/` 로 보내도 무방하다.
 
 ## 검증 계획
 ### 백엔드
 - Google env 유효/무효에 따른 `googleEnabled` 계산 테스트
 - 허용 도메인 파서 테스트
 - state/nonce 검증 테스트
+- PKCE verifier/challenge 사용 테스트
 - provider 충돌 테스트
 - 신규 Google 사용자 생성 테스트
+- `googleSub` 기반 기존 사용자 로그인 테스트
+- 동일 `googleSub` + 이메일 변경 케이스 테스트
+- blocked user(`accessBlocked`) 거부 테스트
 
 ### 웹
 - `googleEnabled=false` 일 때 버튼 비노출
 - `googleEnabled=true` 일 때 버튼 노출
 - callback 성공 시 세션 쿠키 설정 및 redirect
 - callback 실패 시 로그인 화면으로 복귀
+- 만료/재사용 ticket 실패 테스트
 
 ### 수동 검증
 - 허용 도메인 계정 로그인 성공
@@ -261,6 +326,7 @@
 - 기존 LOCAL 동일 이메일 로그인 실패
 - 기존 LDAP 동일 이메일 로그인 실패
 - 신규 사용자 자동 생성 확인
+- 동일 ticket 재사용 실패 확인
 
 ## 예상 변경 파일
 ### 서버
@@ -296,14 +362,12 @@
 
 ### 이번 설계의 한계
 - 관리 UI에서 on/off/도메인 수정이 불가하다.
-- Google `sub` 영속 저장이 없어 장기적으로 provider 내부 식별 강화 여지가 남는다.
 - 향후 Microsoft/Azure AD 등 추가 시 추상화가 더 필요할 수 있다.
 
 ## 후속 확장 후보
 - 관리자 화면에서 Google OIDC 설정 관리
 - OIDC provider 공통 인터페이스 추상화
 - 계정 연결/병합 승인 플로우
-- Google `sub` 저장 및 추가 무결성 검증
 - role/group 기반 자동 권한 매핑
 
 ## 구현 결론
