@@ -183,6 +183,18 @@ export function assertGoogleOidcAvailable(
     return config;
 }
 
+export function isGoogleOidcAvailable(
+    superAdminExists: boolean,
+    env: EnvSource = process.env,
+): boolean {
+    try {
+        assertGoogleOidcAvailable(superAdminExists, env);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 function createRandomToken(size = 32): string {
     return randomBytes(size).toString("base64url");
 }

@@ -7,6 +7,7 @@ import {
     createGoogleAuthorizationRequest,
     getGoogleOidcConfig,
     isAllowedGoogleDomain,
+    isGoogleOidcAvailable,
 } from "./google-oidc.service";
 
 const originalEnv = { ...process.env };
@@ -84,6 +85,35 @@ describe("assertGoogleOidcAvailable", () => {
         };
 
         expect(() => assertGoogleOidcAvailable(true)).toThrow(/client id/i);
+    });
+});
+
+describe("isGoogleOidcAvailable", () => {
+    it("returns false instead of throwing for invalid or unavailable config", () => {
+        process.env = {
+            ...originalEnv,
+            GOOGLE_OIDC_ENABLED: "true",
+            GOOGLE_OIDC_CLIENT_ID: "",
+            GOOGLE_OIDC_CLIENT_SECRET: "client-secret",
+            GOOGLE_OIDC_REDIRECT_URI: "https://example.com/auth/google/callback",
+            GOOGLE_OIDC_ALLOWED_DOMAINS: "example.com",
+        };
+
+        expect(isGoogleOidcAvailable(false)).toBe(false);
+        expect(isGoogleOidcAvailable(true)).toBe(false);
+    });
+
+    it("returns true for complete config with an existing super admin", () => {
+        process.env = {
+            ...originalEnv,
+            GOOGLE_OIDC_ENABLED: "true",
+            GOOGLE_OIDC_CLIENT_ID: "client-id",
+            GOOGLE_OIDC_CLIENT_SECRET: "client-secret",
+            GOOGLE_OIDC_REDIRECT_URI: "https://example.com/auth/google/callback",
+            GOOGLE_OIDC_ALLOWED_DOMAINS: "example.com",
+        };
+
+        expect(isGoogleOidcAvailable(true)).toBe(true);
     });
 });
 
