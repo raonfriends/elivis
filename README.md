@@ -47,12 +47,32 @@
 
 ## 스크린샷
 
+<details>
+<summary><strong>스크린샷 펼치기</strong></summary>
+
 <p align="center">
-  <img src="docs/assets/readme/screen1.png" alt="Elivis 앱 화면 1" width="780" />
+  <img src="docs/assets/readme/screen1.jpg" alt="Elivis 앱 화면 1" width="780" />
 </p>
 <p align="center">
-  <img src="docs/assets/readme/screen2.png" alt="Elivis 앱 화면 2" width="780" />
+  <img src="docs/assets/readme/screen2.jpg" alt="Elivis 앱 화면 2" width="780" />
 </p>
+<p align="center">
+  <img src="docs/assets/readme/screen3.jpg" alt="Elivis 앱 화면 3" width="780" />
+</p>
+<p align="center">
+  <img src="docs/assets/readme/screen4.jpg" alt="Elivis 앱 화면 4" width="780" />
+</p>
+<p align="center">
+  <img src="docs/assets/readme/screen5.jpg" alt="Elivis 앱 화면 5" width="780" />
+</p>
+<p align="center">
+  <img src="docs/assets/readme/screen6.jpg" alt="Elivis 앱 화면 6" width="780" />
+</p>
+<p align="center">
+  <img src="docs/assets/readme/screen7.jpg" alt="Elivis 앱 화면 7" width="780" />
+</p>
+
+</details>
 
 ---
 
