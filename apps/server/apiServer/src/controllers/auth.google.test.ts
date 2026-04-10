@@ -338,7 +338,62 @@ describe("createAuthController google flow", () => {
         expect(reply.statusCode).toBe(302);
     });
 
-    it("rejects explicit provider collisions with local or LDAP users", async () => {
+    it("reuses the googleSub match even when the Google email changed", async () => {
+        const existingUser: MockUser = {
+            id: "google-user-id",
+            email: "old-email@example.com",
+            name: "Existing User",
+            password: "hash",
+            systemRole: "USER",
+            authProvider: "GOOGLE",
+            googleSub: "google-sub",
+            accessBlocked: false,
+            accessBlockReason: null,
+        };
+        mockConsumeGoogleAuthorization.mockResolvedValueOnce({
+            profile: {
+                sub: "google-sub",
+                email: "new-email@example.com",
+                emailVerified: true,
+                name: "Google Person",
+                hostedDomain: "example.com",
+            },
+            tokenSet: { access_token: "google-access-token" },
+        });
+        const findUnique = vi.fn(async (args: unknown) => {
+            const typedArgs = args as { where: Record<string, string> };
+            if ("googleSub" in typedArgs.where) {
+                return existingUser;
+            }
+            if ("email" in typedArgs.where) {
+                throw new Error("email lookup should not happen when googleSub matches even after email changes");
+            }
+            return null;
+        });
+        const { app, redis } = createApp({ findUniqueImpl: findUnique });
+        redis.store.set(
+            "auth:google:state:returned-state",
+            JSON.stringify({ state: "returned-state", nonce: "nonce-1", codeVerifier: "verifier-1" }),
+        );
+        const controller = createAuthController(app as never);
+        const reply = createReply();
+
+        await controller.googleCallback(
+            {
+                lang: "en",
+                query: { code: "auth-code", state: "returned-state" },
+            } as never,
+            reply as never,
+        );
+
+        expect(findUnique).toHaveBeenCalledWith(expect.objectContaining({ where: { googleSub: "google-sub" } }));
+        expect(app.prisma.user.update).not.toHaveBeenCalled();
+        expect(app.prisma.user.create).not.toHaveBeenCalled();
+        expect(mockGenerateAccessToken).toHaveBeenCalledWith("google-user-id");
+        expect(reply.statusCode).toBe(302);
+    });
+
+    it("rejects explicit provider collisions with local users", async () => {
         const collidingUser: MockUser = {
             id: "local-user-id",
             email: "person@example.com",
@@ -346,6 +401,50 @@ describe("createAuthController google flow", () => {
             password: "hash",
             systemRole: "USER",
             authProvider: "LOCAL",
+            googleSub: null,
+            accessBlocked: false,
+            accessBlockReason: null,
+        };
+        const { app, redis } = createApp({
+            findUniqueImpl: async (args: unknown) => {
+                const typedArgs = args as { where: Record<string, string> };
+                if ("googleSub" in typedArgs.where) {
+                    return null;
+                }
+                if ("email" in typedArgs.where) {
+                    return collidingUser;
+                }
+                return null;
+            },
+        });
+        redis.store.set(
+            "auth:google:state:returned-state",
+            JSON.stringify({ state: "returned-state", nonce: "nonce-1", codeVerifier: "verifier-1" }),
+        );
+        const controller = createAuthController(app as never);
+        const reply = createReply();
+
+        await controller.googleCallback(
+            {
+                lang: "en",
+                query: { code: "auth-code", state: "returned-state" },
+            } as never,
+            reply as never,
+        );
+
+        expect(reply.statusCode).toBe(409);
+        expect(app.prisma.user.create).not.toHaveBeenCalled();
+        expect(mockGenerateAccessToken).not.toHaveBeenCalled();
+    });
+
+    it("rejects explicit provider collisions with LDAP users", async () => {
+        const collidingUser: MockUser = {
+            id: "ldap-user-id",
+            email: "person@example.com",
+            name: "Ldap User",
+            password: "hash",
+            systemRole: "USER",
+            authProvider: "LDAP",
             googleSub: null,
             accessBlocked: false,
             accessBlockReason: null,
@@ -421,6 +520,69 @@ describe("createAuthController google flow", () => {
         expect(reply.statusCode).toBe(403);
         expect(mockGenerateAccessToken).not.toHaveBeenCalled();
         expect(redis.store.size).toBe(0);
+    });
+
+    it("rejects blocked users during completion even if the callback already issued a ticket", async () => {
+        const blockedUser: MockUser = {
+            id: "google-user-id",
+            email: "person@example.com",
+            name: "Blocked User",
+            password: "hash",
+            systemRole: "USER",
+            authProvider: "GOOGLE",
+            googleSub: "google-sub",
+            accessBlocked: true,
+            accessBlockReason: "policy",
+        };
+        const { app, redis } = createApp({
+            findUniqueImpl: async (args: unknown) => {
+                const typedArgs = args as { where: Record<string, string> };
+                if ("id" in typedArgs.where) {
+                    return blockedUser;
+                }
+                return null;
+            },
+        });
+        const controller = createAuthController(app as never);
+        const reply = createReply();
+        const completePayload = {
+            accessToken: "app-access-token",
+            refreshToken: "app-refresh-token",
+            user: {
+                id: "google-user-id",
+                email: "person@example.com",
+                name: "Google Person",
+                systemRole: "USER",
+            },
+        };
+        redis.store.set("auth:google:ticket:ticket-1", JSON.stringify(completePayload));
+
+        await controller.googleComplete(
+            {
+                lang: "en",
+                body: { ticket: "ticket-1" },
+            } as never,
+            reply as never,
+        );
+
+        expect(reply.statusCode).toBe(403);
+        expect(reply.payload).toMatchObject({
+            data: {
+                accessBlocked: true,
+                accessBlockReason: "policy",
+            },
+        });
+
+        const secondReply = createReply();
+        await controller.googleComplete(
+            {
+                lang: "en",
+                body: { ticket: "ticket-1" },
+            } as never,
+            secondReply as never,
+        );
+
+        expect(secondReply.statusCode).toBe(401);
     });
 
     it("consumes completion tickets exactly once and returns the login payload", async () => {

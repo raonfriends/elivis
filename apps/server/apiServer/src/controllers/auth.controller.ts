@@ -368,6 +368,20 @@ export function createAuthController(app: FastifyInstance) {
             return reply.code(401).send(unauthorized(t(lang, MSG.AUTH_GOOGLE_TICKET_INVALID)));
         }
 
+        const user = await app.prisma.user.findUnique({
+            where: { id: payload.user.id },
+            select: {
+                accessBlocked: true,
+                accessBlockReason: true,
+            },
+        });
+
+        if (user?.accessBlocked) {
+            return reply.code(403).send(
+                forbiddenAccessBlocked(t(lang, MSG.AUTH_ACCESS_BLOCKED), user.accessBlockReason),
+            );
+        }
+
         return reply.send(payload);
     }
 
