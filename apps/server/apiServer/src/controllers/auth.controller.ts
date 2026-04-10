@@ -359,7 +359,11 @@ export function createAuthController(app: FastifyInstance) {
             },
         });
 
-        if (user?.accessBlocked) {
+        if (!user) {
+            return reply.code(401).send(unauthorized(t(lang, MSG.AUTH_GOOGLE_TICKET_INVALID)));
+        }
+
+        if (user.accessBlocked) {
             return reply.code(403).send(
                 forbiddenAccessBlocked(t(lang, MSG.AUTH_ACCESS_BLOCKED), user.accessBlockReason),
             );

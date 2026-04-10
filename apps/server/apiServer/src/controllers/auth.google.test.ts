@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { join } from "node:path";
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -188,7 +188,7 @@ beforeEach(() => {
 
 describe("auth google route wiring", () => {
     it("registers google auth start/callback/complete routes", () => {
-        const routeFile = readFileSync(resolve(process.cwd(), "src/routes/auth.routes.ts"), "utf8");
+        const routeFile = readFileSync(join(__dirname, "../routes/auth.routes.ts"), "utf8");
 
         expect(routeFile).toContain('app.get("/auth/google/start"');
         expect(routeFile).toContain('app.get("/auth/google/callback"');
@@ -633,8 +633,68 @@ describe("createAuthController google flow", () => {
         expect(secondReply.statusCode).toBe(401);
     });
 
+    it("rejects completion when the ticket user no longer exists", async () => {
+        const { app, redis } = createApp({
+            findUniqueImpl: async (args: unknown) => {
+                const typedArgs = args as { where: Record<string, string> };
+                if ("id" in typedArgs.where) {
+                    return null;
+                }
+                return null;
+            },
+        });
+        const controller = createAuthController(app as never);
+        const reply = createReply();
+        const completePayload = {
+            accessToken: "app-access-token",
+            refreshToken: "app-refresh-token",
+            user: {
+                id: "missing-user-id",
+                email: "person@example.com",
+                name: "Google Person",
+                systemRole: "USER",
+            },
+        };
+        redis.store.set("auth:google:ticket:ticket-1", JSON.stringify(completePayload));
+
+        await controller.googleComplete(
+            {
+                lang: "en",
+                body: { ticket: "ticket-1" },
+            } as never,
+            reply as never,
+        );
+
+        expect(reply.statusCode).toBe(401);
+        expect(reply.payload).toMatchObject({
+            code: 401,
+            data: null,
+            message: "server.auth.googleTicketInvalid",
+        });
+        expect(redis.store.size).toBe(0);
+    });
+
     it("consumes completion tickets exactly once and returns the login payload", async () => {
-        const { app, redis } = createApp();
+        const existingUser: MockUser = {
+            id: "google-user-id",
+            email: "person@example.com",
+            name: "Google Person",
+            password: "hash",
+            systemRole: "USER",
+            authProvider: "GOOGLE",
+            googleSub: "google-sub",
+            accessBlocked: false,
+            accessBlockReason: null,
+        };
+        const { app, redis } = createApp({
+            findUniqueImpl: async (args: unknown) => {
+                const typedArgs = args as { where: Record<string, string> };
+                if ("id" in typedArgs.where) {
+                    return existingUser;
+                }
+                return null;
+            },
+        });
         const controller = createAuthController(app as never);
         const reply = createReply();
         const completePayload = {
