@@ -669,7 +669,7 @@ describe("createAuthController google flow", () => {
         expect(reply.payload).toMatchObject({
             code: 401,
             data: null,
-            message: "server.auth.googleTicketInvalid",
+            message: "The Google sign-in ticket is invalid or has expired.",
         });
         expect(redis.store.size).toBe(0);
     });

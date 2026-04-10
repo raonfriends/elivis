@@ -25,6 +25,12 @@ export const ja = {
       ldapModeDisabled: "サーバーでLDAPログインが無効になっています。",
       ldapNotConfigured:
         "LDAPは有効ですが、サーバーURLまたは検索設定が不足しています。管理画面でLDAPを設定してください。",
+      googleUnavailable: "現在、Googleログインは利用できません。",
+      googleCallbackInvalid: "Googleログインのセッションが無効か期限切れです。もう一度お試しください。",
+      googleProviderConflict:
+        "このメールアドレスには別のログイン方法のアカウントが既に存在します。元のログイン方法をご利用ください。",
+      googleTicketRequired: "Googleログインチケットが必要です。",
+      googleTicketInvalid: "Googleログインチケットが無効か期限切れです。",
     },
     setup: {
       tokenInvalid: "管理者認証トークンが間違っています。",

@@ -27,6 +27,12 @@ export const ko = {
             ldapModeDisabled: "서버에서 LDAP 로그인이 비활성화되어 있습니다.",
             ldapNotConfigured:
                 "LDAP가 켜져 있지만 서버 URL·검색 설정이 올바르지 않습니다. 관리자 화면에서 LDAP을 설정해 주세요.",
+            googleUnavailable: "현재 Google 로그인을 사용할 수 없습니다.",
+            googleCallbackInvalid: "Google 로그인 세션이 유효하지 않거나 만료되었습니다. 다시 시도해 주세요.",
+            googleProviderConflict:
+                "같은 이메일로 다른 로그인 방식의 계정이 이미 존재합니다. 원래 사용하던 로그인 방식으로 로그인해 주세요.",
+            googleTicketRequired: "Google 로그인 티켓이 필요합니다.",
+            googleTicketInvalid: "Google 로그인 티켓이 유효하지 않거나 만료되었습니다.",
         },
         setup: {
             tokenInvalid: "관리자 인증 토큰이 틀립니다.",

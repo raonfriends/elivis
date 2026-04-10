@@ -25,6 +25,12 @@ export const en = {
       ldapModeDisabled: "LDAP sign-in is disabled on the server.",
       ldapNotConfigured:
         "LDAP is enabled but the server URL or search settings are incomplete. Please finish LDAP setup in the admin UI.",
+      googleUnavailable: "Google sign-in is currently unavailable.",
+      googleCallbackInvalid: "The Google sign-in session is invalid or has expired. Please try again.",
+      googleProviderConflict:
+        "An account with this email already exists with a different sign-in method. Please use your original sign-in method.",
+      googleTicketRequired: "Google sign-in ticket is required.",
+      googleTicketInvalid: "The Google sign-in ticket is invalid or has expired.",
     },
     setup: {
       tokenInvalid: "Invalid admin setup token.",
