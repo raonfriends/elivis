@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { AT_COOKIE } from "@/lib/server/auth.server";
 
 // 인증 없이 접근 가능한 경로
-const PUBLIC_PATHS = ["/login", "/auth/google/callback"];
+const PUBLIC_PATHS = ["/login", "/auth/google/callback", "/account-suspended"];
 
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
