@@ -291,39 +291,22 @@ export function createAuthController(app: FastifyInstance) {
             });
 
             if (emailUser) {
-                if (emailUser.authProvider !== "GOOGLE") {
-                    return reply.code(409).send(conflict(t(lang, MSG.AUTH_GOOGLE_PROVIDER_CONFLICT)));
-                }
-
-                const needsUpdate =
-                    emailUser.googleSub !== profile.sub || emailUser.email !== profile.email || emailUser.name !== profile.name;
-
-                user = needsUpdate
-                    ? await app.prisma.user.update({
-                          where: { id: emailUser.id },
-                          data: {
-                              email: profile.email,
-                              name: profile.name,
-                              googleSub: profile.sub,
-                          },
-                          select: loginUserSelect,
-                      })
-                    : emailUser;
-            } else {
-                const placeholderPassword = await bcrypt.hash(randomBytes(48).toString("hex"), 12);
-                user = await app.prisma.user.create({
-                    data: {
-                        id: generatePublicId(),
-                        email: profile.email,
-                        password: placeholderPassword,
-                        name: profile.name,
-                        authProvider: "GOOGLE",
-                        googleSub: profile.sub,
-                        systemRole: "USER",
-                    },
-                    select: loginUserSelect,
-                });
+                return reply.code(409).send(conflict(t(lang, MSG.AUTH_GOOGLE_PROVIDER_CONFLICT)));
             }
+
+            const placeholderPassword = await bcrypt.hash(randomBytes(48).toString("hex"), 12);
+            user = await app.prisma.user.create({
+                data: {
+                    id: generatePublicId(),
+                    email: profile.email,
+                    password: placeholderPassword,
+                    name: profile.name,
+                    authProvider: "GOOGLE",
+                    googleSub: profile.sub,
+                    systemRole: "USER",
+                },
+                select: loginUserSelect,
+            });
         }
 
         if (user.accessBlocked) {

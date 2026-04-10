@@ -393,6 +393,54 @@ describe("createAuthController google flow", () => {
         expect(reply.statusCode).toBe(302);
     });
 
+    it("rejects same-email GOOGLE users when the googleSub differs", async () => {
+        const collidingUser: MockUser = {
+            id: "google-user-id",
+            email: "person@example.com",
+            name: "Existing Google User",
+            password: "hash",
+            systemRole: "USER",
+            authProvider: "GOOGLE",
+            googleSub: "different-google-sub",
+            accessBlocked: false,
+            accessBlockReason: null,
+        };
+        const { app, redis } = createApp({
+            findUniqueImpl: async (args: unknown) => {
+                const typedArgs = args as { where: Record<string, string> };
+                if ("googleSub" in typedArgs.where) {
+                    return null;
+                }
+                if ("email" in typedArgs.where) {
+                    return collidingUser;
+                }
+                return null;
+            },
+        });
+        redis.store.set(
+            "auth:google:state:returned-state",
+            JSON.stringify({ state: "returned-state", nonce: "nonce-1", codeVerifier: "verifier-1" }),
+        );
+        const controller = createAuthController(app as never);
+        const reply = createReply();
+
+        await controller.googleCallback(
+            {
+                lang: "en",
+                query: { code: "auth-code", state: "returned-state" },
+            } as never,
+            reply as never,
+        );
+
+        expect(reply.statusCode).toBe(409);
+        expect(app.prisma.user.update).not.toHaveBeenCalled();
+        expect(app.prisma.user.create).not.toHaveBeenCalled();
+        expect(mockGenerateAccessToken).not.toHaveBeenCalled();
+        expect(mockGenerateRefreshToken).not.toHaveBeenCalled();
+        expect(reply.redirectUrl).toBeUndefined();
+        expect(redis.store.size).toBe(0);
+    });
+
     it("rejects explicit provider collisions with local users", async () => {
         const collidingUser: MockUser = {
             id: "local-user-id",
