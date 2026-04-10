@@ -17,6 +17,7 @@ import { getApiBaseUrl } from "@/lib/http/api-base-url";
 import type { ApiNotificationPreferences } from "@/lib/mappers/user";
 import type { UserProfile } from "@/lib/user/user-types";
 import { StatusDropdown } from "@repo/ui";
+import { isExternalAuthProvider } from "../../../../../../packages/ui/src/types/user-profile";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 타입
@@ -387,7 +388,7 @@ function SecurityTab({ user }: { user: UserProfile | null }) {
     const initial: ChangePasswordState = {};
     const [state, action, isPending] = useActionState(changePasswordAction, initial);
 
-    if (user?.authProvider && user.authProvider !== "LOCAL") {
+    if (isExternalAuthProvider(user?.authProvider)) {
         return <p className="text-sm text-stone-600">{t("externalOnly")}</p>;
     }
 

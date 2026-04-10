@@ -96,8 +96,6 @@ vi.mock("@/app/actions/users", () => ({
 }));
 
 vi.mock("@repo/ui", () => ({
-    isExternalAuthProvider: (authProvider: UserProfile["authProvider"]) =>
-        authProvider === "LDAP" || authProvider === "GOOGLE",
     StatusDropdown: () => <div data-testid="status-dropdown" />,
 }));
 
@@ -151,15 +149,18 @@ describe("SettingsClient security tab", () => {
         });
     }
 
-    it("hides the password form for GOOGLE accounts and shows generic external sign-in wording", () => {
-        renderFor("GOOGLE");
+    it.each(["GOOGLE", "LDAP"] as const)(
+        "hides the password form for %s accounts and shows generic external sign-in wording",
+        (authProvider) => {
+            renderFor(authProvider);
 
-        expect(container.textContent).toContain(
-            "Accounts that sign in through an external provider cannot change password here.",
-        );
-        expect(container.textContent).not.toContain("Current password");
-        expect(container.textContent).not.toContain("Update password");
-    });
+            expect(container.textContent).toContain(
+                "Accounts that sign in through an external provider cannot change password here.",
+            );
+            expect(container.textContent).not.toContain("Current password");
+            expect(container.textContent).not.toContain("Update password");
+        },
+    );
 
     it("keeps the password form visible for LOCAL accounts", () => {
         renderFor("LOCAL");
