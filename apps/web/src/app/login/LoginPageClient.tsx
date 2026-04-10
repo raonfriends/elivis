@@ -16,7 +16,6 @@ const REMEMBER_PREF_KEY = "elivis_remember_pref";
 export interface LoginPageClientProps {
     publicSignupEnabled: boolean;
     ldapEnabled: boolean;
-    googleEnabled: boolean;
 }
 
 export function LoginPageClient({ publicSignupEnabled, ldapEnabled }: LoginPageClientProps) {

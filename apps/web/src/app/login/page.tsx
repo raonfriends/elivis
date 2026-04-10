@@ -4,11 +4,5 @@ import { LoginPageClient } from "./LoginPageClient";
 
 export default async function LoginPage() {
     const config = await fetchPublicAuthConfig();
-    return (
-        <LoginPageClient
-            publicSignupEnabled={config.publicSignupEnabled}
-            ldapEnabled={config.ldapEnabled}
-            googleEnabled={config.googleEnabled}
-        />
-    );
+    return <LoginPageClient publicSignupEnabled={config.publicSignupEnabled} ldapEnabled={config.ldapEnabled} />;
 }
