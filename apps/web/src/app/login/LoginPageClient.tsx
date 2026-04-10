@@ -16,9 +16,10 @@ const REMEMBER_PREF_KEY = "elivis_remember_pref";
 export interface LoginPageClientProps {
     publicSignupEnabled: boolean;
     ldapEnabled: boolean;
+    googleEnabled: boolean;
 }
 
-export function LoginPageClient({ publicSignupEnabled, ldapEnabled }: LoginPageClientProps) {
+export function LoginPageClient({ publicSignupEnabled, ldapEnabled, googleEnabled }: LoginPageClientProps) {
     const t = useTranslations("auth");
     const [state, formAction, isPending] = useActionState(loginAction, initialState);
 
@@ -26,6 +27,7 @@ export function LoginPageClient({ publicSignupEnabled, ldapEnabled }: LoginPageC
     const [rememberEmail, setRememberEmail] = useState(false);
     const [loginTab, setLoginTab] = useState<"local" | "ldap">("local");
     const [signupOpen, setSignupOpen] = useState(false);
+    void googleEnabled;
 
     useEffect(() => {
         const pref = localStorage.getItem(REMEMBER_PREF_KEY) === "1";

@@ -23,6 +23,7 @@ const COOKIE_BASE = {
 export type ApiPublicAuthConfig = {
     publicSignupEnabled: boolean;
     ldapEnabled: boolean;
+    googleEnabled: boolean;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -46,19 +47,20 @@ export async function fetchPublicAuthConfig(): Promise<ApiPublicAuthConfig> {
             cache: "no-store",
         });
         if (!res.ok) {
-            return { publicSignupEnabled: false, ldapEnabled: false };
+            return { publicSignupEnabled: false, ldapEnabled: false, googleEnabled: false };
         }
         const body = (await res.json()) as ApiEnvelope<ApiPublicAuthConfig>;
         const d = body.data;
         if (!d || typeof d !== "object") {
-            return { publicSignupEnabled: false, ldapEnabled: false };
+            return { publicSignupEnabled: false, ldapEnabled: false, googleEnabled: false };
         }
         return {
             publicSignupEnabled: Boolean(d.publicSignupEnabled),
             ldapEnabled: Boolean(d.ldapEnabled),
+            googleEnabled: Boolean(d.googleEnabled),
         };
     } catch {
-        return { publicSignupEnabled: false, ldapEnabled: false };
+        return { publicSignupEnabled: false, ldapEnabled: false, googleEnabled: false };
     }
 }
 

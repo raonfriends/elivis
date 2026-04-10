@@ -8,6 +8,7 @@ export default async function LoginPage() {
         <LoginPageClient
             publicSignupEnabled={config.publicSignupEnabled}
             ldapEnabled={config.ldapEnabled}
+            googleEnabled={config.googleEnabled}
         />
     );
 }

@@ -29,6 +29,51 @@ function seedLdapFromEnv() {
     };
 }
 
+export type GoogleOidcEnv = {
+    enabled: boolean;
+    clientId: string;
+    clientSecret: string;
+    redirectUri: string;
+    allowedDomains: string[];
+};
+
+export function getGoogleOidcEnv(): GoogleOidcEnv {
+    return {
+        enabled: isTruthyEnv(process.env.GOOGLE_OIDC_ENABLED),
+        clientId: process.env.GOOGLE_OIDC_CLIENT_ID?.trim() ?? "",
+        clientSecret: process.env.GOOGLE_OIDC_CLIENT_SECRET?.trim() ?? "",
+        redirectUri: process.env.GOOGLE_OIDC_REDIRECT_URI?.trim() ?? "",
+        allowedDomains: (process.env.GOOGLE_OIDC_ALLOWED_DOMAINS ?? "")
+            .split(",")
+            .map((value) => value.trim().toLowerCase())
+            .filter(Boolean),
+    };
+}
+
+function isValidUrl(value: string): boolean {
+    try {
+        new URL(value);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+export function isGoogleOidcEnvValid(env: GoogleOidcEnv = getGoogleOidcEnv()): boolean {
+    return (
+        env.enabled &&
+        env.clientId.length > 0 &&
+        env.clientSecret.length > 0 &&
+        env.redirectUri.length > 0 &&
+        isValidUrl(env.redirectUri) &&
+        env.allowedDomains.length > 0
+    );
+}
+
+export function isGoogleOidcAvailable(superAdminExists: boolean, env: GoogleOidcEnv = getGoogleOidcEnv()): boolean {
+    return superAdminExists && isGoogleOidcEnvValid(env);
+}
+
 export async function getAuthSettingsRow(prisma: PrismaClient) {
     const row = await prisma.authSettings.findUnique({ where: { id: ROW_ID } });
     if (row) return row;
@@ -89,10 +134,14 @@ export async function getLdapRuntimeConfig(prisma: PrismaClient): Promise<LdapAu
 export async function getPublicAuthConfig(prisma: PrismaClient): Promise<{
     publicSignupEnabled: boolean;
     ldapEnabled: boolean;
+    googleEnabled: boolean;
 }> {
     const row = await getAuthSettingsRow(prisma);
+    const superAdminExists = (await prisma.user.count({ where: { systemRole: "SUPER_ADMIN" } })) > 0;
+
     return {
         publicSignupEnabled: row.publicSignupEnabled,
         ldapEnabled: isLdapOfferedInPublicUi(row),
+        googleEnabled: isGoogleOidcAvailable(superAdminExists),
     };
 }
