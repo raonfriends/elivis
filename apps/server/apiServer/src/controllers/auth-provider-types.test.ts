@@ -29,4 +29,23 @@ describe("google auth provider wiring", () => {
 
     expect(authController).not.toContain('authProvider: "LOCAL" | "LDAP";');
   });
+
+  it("keeps LDAP login limited to LDAP users when an account already exists", () => {
+    const authController = readRepoFile("apps/server/apiServer/src/controllers/auth.controller.ts");
+
+    expect(authController).toContain('if (user && user.authProvider !== "LDAP")');
+    expect(authController).toContain('user.authProvider === "LOCAL" && mode === "ldap"');
+  });
+
+  it("uses a generic external-password message once non-LDAP providers exist", () => {
+    const userController = readRepoFile("apps/server/apiServer/src/controllers/user.controller.ts");
+    const messages = readRepoFile("apps/server/apiServer/src/utils/messages.ts");
+    const enLocale = readRepoFile("packages/i18n/src/locales/en.ts");
+
+    expect(userController).toContain("MSG.USER_PASSWORD_EXTERNAL_ONLY");
+    expect(messages).toContain('USER_PASSWORD_EXTERNAL_ONLY: "server.user.passwordExternalOnly"');
+    expect(enLocale).toContain(
+      'passwordExternalOnly: "Externally managed accounts cannot change password through this API."',
+    );
+  });
 });

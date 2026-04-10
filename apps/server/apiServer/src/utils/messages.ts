@@ -186,7 +186,7 @@ export const MSG = {
     USER_SEARCH_RESULTS: "server.user.searchResults",
     USER_PASSWORD_UPDATED: "server.user.passwordUpdated",
     USER_PASSWORD_CURRENT_WRONG: "server.user.passwordCurrentWrong",
-    USER_PASSWORD_LDAP_ONLY: "server.user.passwordLdapOnly",
+    USER_PASSWORD_EXTERNAL_ONLY: "server.user.passwordExternalOnly",
     USER_PASSWORD_NEW_TOO_SHORT: "server.user.passwordNewTooShort",
     USER_PASSWORD_FIELDS_REQUIRED: "server.user.passwordFieldsRequired",
     USER_NOTIFICATION_PREFS_FETCHED: "server.user.notificationPrefsFetched",

@@ -160,7 +160,7 @@ export const ko = {
             searchResults: "사용자 검색이 완료되었습니다.",
             passwordUpdated: "비밀번호가 변경되었습니다.",
             passwordCurrentWrong: "현재 비밀번호가 올바르지 않습니다.",
-            passwordLdapOnly: "LDAP 계정은 이 API로 비밀번호를 변경할 수 없습니다.",
+            passwordExternalOnly: "외부 인증 계정은 이 API로 비밀번호를 변경할 수 없습니다.",
             passwordNewTooShort: "새 비밀번호는 8자 이상이어야 합니다.",
             passwordFieldsRequired: "현재 비밀번호와 새 비밀번호를 모두 입력해 주세요.",
             notificationPrefsFetched: "알림 설정을 불러왔습니다.",

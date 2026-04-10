@@ -160,7 +160,7 @@ export const ja = {
       searchResults:  "ユーザー検索が完了しました。",
       passwordUpdated: "パスワードを変更しました。",
       passwordCurrentWrong: "現在のパスワードが正しくありません。",
-      passwordLdapOnly: "LDAPアカウントはこのAPIではパスワードを変更できません。",
+      passwordExternalOnly: "外部認証アカウントはこのAPIではパスワードを変更できません。",
       passwordNewTooShort: "新しいパスワードは8文字以上にしてください。",
       passwordFieldsRequired: "現在のパスワードと新しいパスワードの両方を入力してください。",
       notificationPrefsFetched: "通知設定を読み込みました。",

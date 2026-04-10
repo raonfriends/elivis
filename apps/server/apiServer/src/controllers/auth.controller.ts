@@ -205,9 +205,9 @@ export function createAuthController(app: FastifyInstance) {
         const ldapFlagOn = await isLdapAuthEnabled(app.prisma);
 
         async function finishLdapLogin(ldapOk: { displayName: string | null }): Promise<FastifyReply> {
-            if (user?.authProvider === "LOCAL") {
+            if (user && user.authProvider !== "LDAP") {
                 const msg =
-                    mode === "ldap"
+                    user.authProvider === "LOCAL" && mode === "ldap"
                         ? t(lang, MSG.AUTH_USE_LOCAL_TAB)
                         : t(lang, MSG.AUTH_INVALID_CREDENTIALS);
                 return reply.code(401).send(unauthorized(msg));

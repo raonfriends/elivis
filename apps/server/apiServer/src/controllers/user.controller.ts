@@ -233,7 +233,7 @@ export function createUserController(app: FastifyInstance) {
         }
         const passwordManagedExternally = row.authProvider !== "LOCAL";
         if (passwordManagedExternally) {
-            return reply.code(400).send(badRequest(t(request.lang, MSG.USER_PASSWORD_LDAP_ONLY)));
+            return reply.code(400).send(badRequest(t(request.lang, MSG.USER_PASSWORD_EXTERNAL_ONLY)));
         }
         const valid = row.password && (await bcrypt.compare(currentPassword, row.password));
         if (!valid) {

@@ -161,7 +161,7 @@ export const en = {
       searchResults:  "User search completed.",
       passwordUpdated: "Your password has been changed.",
       passwordCurrentWrong: "Current password is incorrect.",
-      passwordLdapOnly: "LDAP accounts cannot change password through this API.",
+      passwordExternalOnly: "Externally managed accounts cannot change password through this API.",
       passwordNewTooShort: "New password must be at least 8 characters.",
       passwordFieldsRequired: "Enter both your current password and a new password.",
       notificationPrefsFetched: "Notification preferences loaded.",
