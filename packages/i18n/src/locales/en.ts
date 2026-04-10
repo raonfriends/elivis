@@ -869,7 +869,7 @@ export const en = {
         confirm:     "Confirm new password",
         submit:      "Update password",
         submitting:  "Updating…",
-        ldapOnly:    "LDAP sign-in accounts cannot change password here.",
+        externalOnly: "Accounts that sign in through an external provider cannot change password here.",
         success:     "Your password has been changed.",
         mismatch:    "New password confirmation does not match.",
         changeError: "Could not change password.",

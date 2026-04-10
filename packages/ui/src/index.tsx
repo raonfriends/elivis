@@ -45,7 +45,8 @@ export { DocxUploader } from "./DocxUploader";
 export { DocxAnalysisView } from "./DocxAnalysisView";
 
 export type { UserStatus } from "./types/user-status";
-export type { UserProfile } from "./types/user-profile";
+export { isExternalAuthProvider } from "./types/user-profile";
+export type { UserAuthProvider, UserProfile } from "./types/user-profile";
 export type {
     SidebarWorkspaceListItem,
     SidebarTeamFavoriteItem,

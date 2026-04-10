@@ -871,7 +871,7 @@ export const ko = {
                 confirm: "새 비밀번호 확인",
                 submit: "비밀번호 변경",
                 submitting: "변경 중…",
-                ldapOnly: "LDAP로 로그인하는 계정은 여기서 비밀번호를 바꿀 수 없습니다.",
+                externalOnly: "외부 인증으로 로그인하는 계정은 여기서 비밀번호를 바꿀 수 없습니다.",
                 success: "비밀번호가 변경되었습니다.",
                 mismatch: "새 비밀번호 확인이 일치하지 않습니다.",
                 changeError: "비밀번호를 변경하지 못했습니다.",

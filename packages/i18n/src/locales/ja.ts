@@ -867,7 +867,7 @@ export const ja = {
         confirm:     "新しいパスワード（確認）",
         submit:      "パスワードを変更",
         submitting:  "変更中…",
-        ldapOnly:    "LDAPでサインインするアカウントはここではパスワードを変更できません。",
+        externalOnly: "外部認証でサインインするアカウントはここではパスワードを変更できません。",
         success:     "パスワードを変更しました。",
         mismatch:    "新しいパスワードの確認が一致しません。",
         changeError: "パスワードを変更できませんでした。",

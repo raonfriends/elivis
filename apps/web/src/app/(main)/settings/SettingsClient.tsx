@@ -387,8 +387,8 @@ function SecurityTab({ user }: { user: UserProfile | null }) {
     const initial: ChangePasswordState = {};
     const [state, action, isPending] = useActionState(changePasswordAction, initial);
 
-    if (user?.authProvider === "LDAP") {
-        return <p className="text-sm text-stone-600">{t("ldapOnly")}</p>;
+    if (user?.authProvider && user.authProvider !== "LOCAL") {
+        return <p className="text-sm text-stone-600">{t("externalOnly")}</p>;
     }
 
     return (
