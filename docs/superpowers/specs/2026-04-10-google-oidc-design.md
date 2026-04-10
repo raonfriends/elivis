@@ -76,6 +76,7 @@
 - `GOOGLE_OIDC_REDIRECT_URI`
 - `GOOGLE_OIDC_ALLOWED_DOMAINS`
 - `GOOGLE_OIDC_SCOPES` (기본값: `openid email profile`)
+- `WEB_PUBLIC_URL`
 
 ### 동작 원칙
 - `GOOGLE_OIDC_ENABLED=true` 이고 필수값이 모두 유효할 때만 공개 UI에 노출한다.
@@ -195,21 +196,47 @@
 구체 방식:
 1. API callback에서 Elivis 토큰(access/refresh)을 직접 URL에 싣지 않는다.
 2. 대신 Redis에 짧은 수명의 login-completion key를 저장한다.
-3. API는 웹의 예: `/auth/google/callback?ticket=...` 로 redirect 한다.
+3. API는 신뢰된 웹 앱 base URL을 사용해 **절대 URL** 예: `${WEB_PUBLIC_URL}/auth/google/callback?ticket=...` 로 redirect 한다.
 4. 웹 route handler가 `ticket` 으로 `POST /api/auth/google/complete` 를 호출해 토큰을 받아 httpOnly cookie를 설정한다.
 5. 이후 `/` 또는 원래 목적지로 redirect 한다.
 
 이유:
 - access/refresh token이 URL, browser history, proxy log에 직접 남지 않는다.
 - 현재 웹 쿠키 관리 패턴과 잘 맞는다.
+- 웹/API 분리 origin 환경에서도 callback 목적지가 명확하다.
 
 주의:
 - 웹이 Redis를 직접 읽지 않는다.
 - completion ticket 소비는 API 단일 엔드포인트에서만 수행한다.
 - ticket은 1회 사용 후 즉시 삭제되어 replay를 막아야 한다.
+- API -> 웹 redirect는 상대 경로가 아니라 **신뢰된 절대 URL** 로만 구성한다.
+
+### 5-1) 웹 callback 공개 경로 처리
+현재 `apps/web/src/proxy.ts` 는 `/login` 만 공개 경로로 취급한다.
+따라서 Google callback route를 실제로 사용하려면 아래 중 하나를 포함해야 한다.
+
+- `PUBLIC_PATHS` 에 `/auth/google/callback` 추가
+- 또는 동일 효과의 공개 경로 네임스페이스 사용
+
+이번 설계에서는 `apps/web/src/proxy.ts` 를 수정해 `/auth/google/callback` 을 공개 경로로 추가하는 것을 기본안으로 한다.
+
+### 5-2) 웹 앱 base URL 설정
+API callback이 웹으로 안전하게 되돌아오려면 신뢰 가능한 웹 origin이 필요하다.
+
+권장 환경변수:
+- `WEB_PUBLIC_URL`
+
+원칙:
+- API는 이 값을 사용해 callback 완료 redirect 절대 URL을 생성한다.
+- user input이나 request header 기반으로 redirect 목적지를 조립하지 않는다.
+- `NEXT_PUBLIC_API_URL` 과는 역할이 다르며, 이는 API 호출 base URL용이다.
 
 ### 6) 사용자 처리 로직
 기존 `auth.controller.ts`에 Google 완료 헬퍼를 추가한다.
+
+추가 영향:
+- `GOOGLE` provider 도입에 따라 사용자 프로필 타입과 보안 설정 UI도 함께 갱신해야 한다.
+- 현재 `LDAP` 만 외부 인증으로 가정한 비밀번호 변경 제한 문구/분기(`SettingsClient`, `user.controller`, `packages/ui` 타입)를 `LOCAL` vs `EXTERNAL(GOOGLE|LDAP)` 관점으로 일반화한다.
 
 동작:
 - `googleSub` 로 기존 `GOOGLE` 사용자 우선 조회
@@ -253,10 +280,12 @@ ID token 검증 시 아래 항목을 명시적으로 검사한다.
 - 기존 폼 아래에 구분선
 - `Google Workspace로 로그인` 버튼 추가
 - LDAP와는 별도 탭이 아니라 **독립된 소셜 버튼** 으로 노출
+- callback 실패 시 `searchParams.error` 또는 동등한 flash 상태를 로그인 카드 상단 에러 영역에 표시
 
 이유:
 - OIDC는 비밀번호 입력형 로그인과 상호작용 패턴이 다르다.
 - 탭보다 독립 CTA가 이해하기 쉽다.
+- callback 오류가 실제 사용자에게 보이도록 기존 로그인 에러 렌더링과 연결해야 한다.
 
 ### 웹 callback 처리
 예상 파일:
@@ -268,6 +297,11 @@ ID token 검증 시 아래 항목을 명시적으로 검사한다.
 - httpOnly cookie 설정
 - 성공 시 `/` redirect
 - 실패 시 `/login?error=...` redirect
+
+추가 요구사항:
+- 이 callback 경로는 인증 전 접근 가능해야 하므로 `apps/web/src/proxy.ts` 공개 경로 예외에 포함한다.
+- 로그인 실패 메시지를 실제로 보여주려면 `apps/web/src/app/login/page.tsx` 가 `searchParams.error` 를 읽어 `LoginPageClient.tsx` 로 전달하거나, 동등한 flash-cookie 메커니즘을 사용해야 한다.
+- v1 기본안은 구현 단순성을 위해 `searchParams.error` 전달 방식을 사용한다.
 
 ## 에러/메시지 설계
 추가 메시지 키 예시:
@@ -328,23 +362,29 @@ ID token 검증 시 아래 항목을 명시적으로 검사한다.
 - 신규 사용자 자동 생성 확인
 - 동일 ticket 재사용 실패 확인
 
-## 예상 변경 파일
+### 예상 변경 파일
 ### 서버
 - `apps/server/apiServer/src/controllers/auth.controller.ts`
+- `apps/server/apiServer/src/controllers/user.controller.ts`
 - `apps/server/apiServer/src/routes/auth.routes.ts`
 - `apps/server/apiServer/src/services/auth-config.service.ts`
 - `apps/server/apiServer/src/services/google-oidc.service.ts` (new)
 - `apps/server/apiServer/src/services/token.service.ts` (재사용 가능, 변경은 최소화)
 - `apps/server/apiServer/src/utils/messages.ts`
+- `apps/server/apiServer/src/index.ts` 또는 동등한 설정 로딩 지점 (필요 시 `WEB_PUBLIC_URL` 검증)
 
 ### 웹
 - `apps/web/src/app/login/page.tsx`
 - `apps/web/src/app/login/LoginPageClient.tsx`
-- `apps/web/src/lib/server/auth.server.ts`
 - `apps/web/src/app/auth/google/callback/...` (new)
+- `apps/web/src/lib/server/auth.server.ts`
+- `apps/web/src/proxy.ts`
+- `apps/web/src/app/(main)/settings/SettingsClient.tsx`
+- `apps/web/src/lib/http/api-base-url.ts` (변경 필요 여부 점검)
 
 ### 공용/DB/문서
 - `packages/database/prisma/schema.prisma`
+- `packages/ui/src/types/user-profile.ts`
 - `packages/i18n/src/locales/ko.ts`
 - `packages/i18n/src/locales/en.ts`
 - `packages/i18n/src/locales/ja.ts`
